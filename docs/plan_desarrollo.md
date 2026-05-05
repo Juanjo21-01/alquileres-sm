@@ -2,7 +2,7 @@
 
 > Sistema de Gestión de Alquileres — San Marcos
 > Documento operativo de desarrollo. Sirve como bitácora: marca cada tarea conforme avances.
-> **Versión 2.1** — Livewire 4 SFC · recibos on-demand · comprobantes con visor PDF.
+> **Versión 3.0** — Livewire 4 SFC · Flux Free · Chart.js · recibos on-demand · comprobantes con visor PDF.
 
 ---
 
@@ -52,8 +52,10 @@
 |---|---|
 | Backend | Laravel 13 (PHP 8.3+) |
 | Frontend | Blade + Livewire 4 (SFC) |
-| Estilos | Tailwind CSS + daisyUI |
-| Cliente JS | Alpine.js (incluido con Livewire) |
+| Componentes UI | Flux Free (livewire/flux) |
+| Estilos | Tailwind CSS (incluido con Flux) |
+| Cliente JS | Alpine.js (incluido con Livewire, no requiere instalación) |
+| Gráficos | Chart.js (vía npm) |
 | BD | MySQL 8 |
 | PDF | barryvdh/laravel-dompdf |
 | Auth | Laravel Fortify (vía starter kit) |
@@ -79,7 +81,7 @@
 
 # Fase 0 — Ajustes post-scaffold
 
-**Objetivo:** dejar el proyecto Laravel (creado por el playbook oficial con `--livewire --boost`) configurado con las decisiones del proyecto: locale español, timezone GT, daisyUI instalado, registro público deshabilitado en Fortify, dompdf instalado, estructura de carpetas adicional creada.
+**Objetivo:** dejar el proyecto Laravel (creado por el playbook oficial con `--livewire --boost`) configurado con las decisiones del proyecto: locale español, timezone GT, Chart.js instalado, registro público deshabilitado en Fortify, dompdf instalado, estructura de carpetas adicional creada.
 
 **Duración:** 1-2 días.
 
@@ -106,17 +108,26 @@
 - [ ] Crear BD: `CREATE DATABASE sga_sm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
 - [ ] Verificar que el archivo de traducciones `lang/es.json` exista (si no, crearlo vacío para empezar).
 
-### Instalación de daisyUI
+### Instalación de Chart.js (para reportes en Fase 5)
 
-- [ ] `npm install -D daisyui@latest`
-- [ ] En `resources/css/app.css` (Tailwind v4 ya viene con starter kit), agregar al final:
-  ```css
-  @plugin "daisyui" {
-      themes: light --default, dark, corporate;
-      logs: false;
+> Chart.js se instala como dependencia npm para no depender de un CDN externo y aprovechar el tree-shaking de Vite.
+
+- [ ] `npm install chart.js`
+- [ ] Verificar en `package.json` que aparece en `dependencies`:
+  ```json
+  "dependencies": {
+      "chart.js": "^4.5.1"
   }
   ```
-- [ ] Verificar con `npm run dev` que compile sin errores.
+- [ ] Importar en `resources/js/app.js` solo cuando lleguemos a Fase 5 (no es necesario hacerlo ahora). Cuando llegue ese momento, se importarán únicamente los componentes que se usen, así Vite hace tree-shaking:
+  ```js
+  // En Fase 5, agregar al app.js:
+  // import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend } from 'chart.js';
+  // Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend);
+  // window.Chart = Chart;
+  ```
+
+> **Nota sobre estilos:** no instalamos daisyUI ni otra librería de componentes UI. **Flux Free** (incluido en `composer.json` como `livewire/flux`) ya provee todos los componentes que SGA-SM necesita: botones, modales, inputs, selects, tablas, badges, toasts, dropdowns, switches, etc. Para componentes que Flux no incluye (date pickers avanzados, charts, etc.), usamos las alternativas nativas o Chart.js como en este caso.
 
 ### Configuración de Fortify (deshabilitar registro)
 
@@ -161,7 +172,7 @@
 - [ ] `npm run dev` compila sin errores.
 - [ ] `composer run dev` (o `php artisan serve` + `npm run dev`) levanta la app.
 - [ ] El admin (creado por seeder en Fase 1) podrá iniciar sesión.
-- [ ] El layout base se ve con Tailwind y daisyUI funcionando.
+- [ ] El layout base se ve con Tailwind y Flux funcionando.
 
 ## Comandos útiles
 
@@ -183,7 +194,8 @@ php artisan optimize:clear
 
 - ✅ El proyecto corre con assets compilados.
 - ✅ El locale es español, el timezone es Guatemala.
-- ✅ daisyUI está disponible (probarlo con `<button class="btn btn-primary">Test</button>`).
+- ✅ Flux está disponible (probarlo con `<flux:button variant="primary">Test</flux:button>`).
+- ✅ Chart.js está en `package.json` como dependencia.
 - ✅ La ruta `/register` no existe.
 - ✅ dompdf está listo para usarse.
 - ✅ La estructura de carpetas extras está creada.
@@ -597,23 +609,17 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 
 new #[Layout('components.layouts.app')] #[Title('Propiedades')] class extends Component {
-    public function with(): array
-    {
-        return [
-            // datos generales si los necesitas
-        ];
-    }
+    //
 }; ?>
 
-<div class="p-6">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold">Propiedades</h1>
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <flux:heading size="xl">Propiedades</flux:heading>
 
         @can('create', App\Models\Propiedad::class)
-            <button class="btn btn-primary"
-                    onclick="document.getElementById('modal-form-propiedad').showModal()">
-                Nueva propiedad
-            </button>
+            <flux:modal.trigger name="form-propiedad">
+                <flux:button variant="primary" icon="plus">Nueva propiedad</flux:button>
+            </flux:modal.trigger>
         @endcan
     </div>
 
@@ -627,6 +633,8 @@ new #[Layout('components.layouts.app')] #[Title('Propiedades')] class extends Co
     <livewire:propiedades.modal-eliminar />
 </div>
 ```
+
+> **Nota sobre modales en Flux:** los modales se identifican por un `name` único. Los abres con `<flux:modal.trigger name="...">` (botón) o programáticamente desde el componente con `Flux::modal('...')->show()`. Se cierran con `Flux::modal('...')->close()` o desde el botón "Cancelar" interno.
 
 ### Ejemplo SFC: `propiedades.tabla`
 
@@ -669,6 +677,7 @@ new class extends Component {
     public function with(): array
     {
         $query = Propiedad::query()
+            ->withCount('cuartos')
             ->when($this->busqueda, fn ($q) => $q->where(function ($q) {
                 $q->where('nombre', 'like', "%{$this->busqueda}%")
                   ->orWhere('direccion', 'like', "%{$this->busqueda}%");
@@ -684,66 +693,68 @@ new class extends Component {
 
 <div>
     <div class="flex flex-col md:flex-row gap-3 mb-4">
-        <input type="text"
-               wire:model.live.debounce.300ms="busqueda"
-               placeholder="Buscar por nombre o dirección..."
-               class="input input-bordered flex-1">
-        <label class="label cursor-pointer gap-2">
-            <input type="checkbox" wire:model.live="soloActivos" class="checkbox">
-            <span class="label-text">Solo activos</span>
-        </label>
+        <flux:input
+            wire:model.live.debounce.300ms="busqueda"
+            icon="magnifying-glass"
+            placeholder="Buscar por nombre o dirección..."
+            class="flex-1" />
+
+        <flux:switch wire:model.live="soloActivos" label="Solo activos" />
     </div>
 
-    <div class="overflow-x-auto">
-        <table class="table table-zebra">
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Dirección</th>
-                    <th>Zona</th>
-                    <th class="text-center">Cuartos</th>
-                    <th class="text-center">Estado</th>
-                    <th class="text-right">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($propiedades as $propiedad)
-                    <tr>
-                        <td class="font-medium">{{ $propiedad->nombre }}</td>
-                        <td>{{ $propiedad->direccion }}</td>
-                        <td>{{ $propiedad->zona ?? '—' }}</td>
-                        <td class="text-center">{{ $propiedad->cuartos_count ?? $propiedad->cuartos()->count() }}</td>
-                        <td class="text-center">
-                            @if ($propiedad->activo)
-                                <span class="badge badge-success">Activa</span>
-                            @else
-                                <span class="badge badge-ghost">Inactiva</span>
-                            @endif
-                        </td>
-                        <td class="text-right">
-                            <a href="{{ route('cuartos.tablero', $propiedad) }}" class="btn btn-sm btn-ghost">Ver cuartos</a>
-                            @can('update', $propiedad)
-                                <button wire:click="editar({{ $propiedad->id }})" class="btn btn-sm btn-info">Editar</button>
-                            @endcan
-                            @can('delete', $propiedad)
-                                <button wire:click="confirmarEliminar({{ $propiedad->id }})" class="btn btn-sm btn-error">Eliminar</button>
-                            @endcan
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="6" class="text-center text-base-content/50 py-8">
-                            No hay propiedades registradas.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+    <flux:table :paginate="$propiedades">
+        <flux:table.columns>
+            <flux:table.column>Nombre</flux:table.column>
+            <flux:table.column>Dirección</flux:table.column>
+            <flux:table.column>Zona</flux:table.column>
+            <flux:table.column align="center">Cuartos</flux:table.column>
+            <flux:table.column align="center">Estado</flux:table.column>
+            <flux:table.column align="end">Acciones</flux:table.column>
+        </flux:table.columns>
 
-    <div class="mt-4">
-        {{ $propiedades->links() }}
-    </div>
+        <flux:table.rows>
+            @forelse ($propiedades as $propiedad)
+                <flux:table.row :key="$propiedad->id">
+                    <flux:table.cell class="font-medium">{{ $propiedad->nombre }}</flux:table.cell>
+                    <flux:table.cell>{{ $propiedad->direccion }}</flux:table.cell>
+                    <flux:table.cell>{{ $propiedad->zona ?? '—' }}</flux:table.cell>
+                    <flux:table.cell align="center">{{ $propiedad->cuartos_count }}</flux:table.cell>
+                    <flux:table.cell align="center">
+                        @if ($propiedad->activo)
+                            <flux:badge color="green" size="sm">Activa</flux:badge>
+                        @else
+                            <flux:badge color="zinc" size="sm">Inactiva</flux:badge>
+                        @endif
+                    </flux:table.cell>
+                    <flux:table.cell align="end">
+                        <flux:button
+                            href="{{ route('cuartos.tablero', $propiedad) }}"
+                            size="xs"
+                            variant="ghost">
+                            Ver cuartos
+                        </flux:button>
+
+                        @can('update', $propiedad)
+                            <flux:button wire:click="editar({{ $propiedad->id }})" size="xs" icon="pencil-square" />
+                        @endcan
+                        @can('delete', $propiedad)
+                            <flux:button
+                                wire:click="confirmarEliminar({{ $propiedad->id }})"
+                                size="xs"
+                                variant="danger"
+                                icon="trash" />
+                        @endcan
+                    </flux:table.cell>
+                </flux:table.row>
+            @empty
+                <flux:table.row>
+                    <flux:table.cell colspan="6" class="text-center text-zinc-500 py-8">
+                        No hay propiedades registradas.
+                    </flux:table.cell>
+                </flux:table.row>
+            @endforelse
+        </flux:table.rows>
+    </flux:table>
 </div>
 ```
 
@@ -757,6 +768,7 @@ new class extends Component {
 use App\Models\Propiedad;
 use Livewire\Component;
 use Livewire\Attributes\On;
+use Flux\Flux;
 
 new class extends Component {
     public ?int $propiedadId = null;
@@ -766,7 +778,6 @@ new class extends Component {
     public string $referencia = '';
     public string $notas = '';
     public bool $activo = true;
-    public bool $abierto = false;
 
     protected function rules(): array
     {
@@ -783,7 +794,7 @@ new class extends Component {
     #[On('abrir-form-propiedad')]
     public function abrir(?int $id = null): void
     {
-        $this->resetExcept('abierto');
+        $this->reset();
         $this->resetValidation();
 
         if ($id) {
@@ -800,8 +811,7 @@ new class extends Component {
             $this->authorize('create', Propiedad::class);
         }
 
-        $this->abierto = true;
-        $this->dispatch('mostrar-modal', id: 'modal-form-propiedad');
+        Flux::modal('form-propiedad')->show();
     }
 
     public function guardar(): void
@@ -819,69 +829,57 @@ new class extends Component {
             $mensaje = 'Propiedad creada correctamente.';
         }
 
-        $this->cerrar();
+        Flux::modal('form-propiedad')->close();
+        Flux::toast(text: $mensaje, variant: 'success');
         $this->dispatch('propiedad-guardada');
-        $this->dispatch('toast', tipo: 'success', mensaje: $mensaje);
     }
 
-    public function cerrar(): void
+    public function cancelar(): void
     {
-        $this->abierto = false;
-        $this->dispatch('cerrar-modal', id: 'modal-form-propiedad');
+        Flux::modal('form-propiedad')->close();
     }
 }; ?>
 
-<dialog id="modal-form-propiedad" class="modal">
-    <div class="modal-box max-w-2xl">
-        <h3 class="font-bold text-lg mb-4">
-            {{ $propiedadId ? 'Editar propiedad' : 'Nueva propiedad' }}
-        </h3>
+<flux:modal name="form-propiedad" class="md:w-[600px]">
+    <form wire:submit="guardar" class="space-y-4">
+        <div>
+            <flux:heading size="lg">
+                {{ $propiedadId ? 'Editar propiedad' : 'Nueva propiedad' }}
+            </flux:heading>
+            <flux:subheading>
+                Datos principales de la casa de alquiler.
+            </flux:subheading>
+        </div>
 
-        <form wire:submit="guardar" class="space-y-3">
-            <div>
-                <label class="label"><span class="label-text">Nombre *</span></label>
-                <input type="text" wire:model="nombre" class="input input-bordered w-full" />
-                @error('nombre') <span class="text-error text-sm">{{ $message }}</span> @enderror
-            </div>
+        <flux:input
+            wire:model="nombre"
+            label="Nombre"
+            placeholder="Casa central, Casa norte..."
+            required />
 
-            <div>
-                <label class="label"><span class="label-text">Dirección *</span></label>
-                <input type="text" wire:model="direccion" class="input input-bordered w-full" />
-                @error('direccion') <span class="text-error text-sm">{{ $message }}</span> @enderror
-            </div>
+        <flux:input
+            wire:model="direccion"
+            label="Dirección"
+            required />
 
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="label"><span class="label-text">Zona</span></label>
-                    <input type="text" wire:model="zona" class="input input-bordered w-full" />
-                </div>
-                <div>
-                    <label class="label"><span class="label-text">Referencia</span></label>
-                    <input type="text" wire:model="referencia" class="input input-bordered w-full" />
-                </div>
-            </div>
+        <div class="grid grid-cols-2 gap-3">
+            <flux:input wire:model="zona" label="Zona" />
+            <flux:input wire:model="referencia" label="Referencia" />
+        </div>
 
-            <div>
-                <label class="label"><span class="label-text">Notas</span></label>
-                <textarea wire:model="notas" class="textarea textarea-bordered w-full" rows="3"></textarea>
-            </div>
+        <flux:textarea wire:model="notas" label="Notas" rows="3" />
 
-            <label class="label cursor-pointer justify-start gap-2">
-                <input type="checkbox" wire:model="activo" class="checkbox">
-                <span class="label-text">Propiedad activa</span>
-            </label>
+        <flux:switch wire:model="activo" label="Propiedad activa" />
 
-            <div class="modal-action">
-                <button type="button" wire:click="cerrar" class="btn">Cancelar</button>
-                <button type="submit" class="btn btn-primary">
-                    <span wire:loading.remove>Guardar</span>
-                    <span wire:loading class="loading loading-spinner"></span>
-                </button>
-            </div>
-        </form>
-    </div>
-    <form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
-</dialog>
+        <div class="flex gap-2 justify-end">
+            <flux:button type="button" wire:click="cancelar" variant="ghost">Cancelar</flux:button>
+            <flux:button type="submit" variant="primary">
+                <span wire:loading.remove wire:target="guardar">Guardar</span>
+                <span wire:loading wire:target="guardar">Guardando...</span>
+            </flux:button>
+        </div>
+    </form>
+</flux:modal>
 ```
 
 ### Ejemplo SFC: `propiedades.modal-eliminar`
@@ -894,6 +892,7 @@ new class extends Component {
 use App\Models\Propiedad;
 use Livewire\Component;
 use Livewire\Attributes\On;
+use Flux\Flux;
 
 new class extends Component {
     public ?int $propiedadId = null;
@@ -908,7 +907,8 @@ new class extends Component {
         $this->propiedadId = $p->id;
         $this->propiedadNombre = $p->nombre;
         $this->error = null;
-        $this->dispatch('mostrar-modal', id: 'modal-eliminar-propiedad');
+
+        Flux::modal('eliminar-propiedad')->show();
     }
 
     public function eliminar(): void
@@ -924,99 +924,64 @@ new class extends Component {
         $nombre = $p->nombre;
         $p->delete();
         $this->reset(['propiedadId', 'propiedadNombre', 'error']);
-        $this->dispatch('cerrar-modal', id: 'modal-eliminar-propiedad');
+
+        Flux::modal('eliminar-propiedad')->close();
+        Flux::toast(text: "Propiedad '{$nombre}' eliminada.", variant: 'success');
         $this->dispatch('propiedad-eliminada');
-        $this->dispatch('toast', tipo: 'success', mensaje: "Propiedad '{$nombre}' eliminada.");
     }
 }; ?>
 
-<dialog id="modal-eliminar-propiedad" class="modal">
-    <div class="modal-box">
-        <h3 class="font-bold text-lg text-error">Confirmar eliminación</h3>
-        <p class="py-4">
-            ¿Seguro que deseas eliminar la propiedad <strong>{{ $propiedadNombre }}</strong>?
-            Esta acción no se puede deshacer.
-        </p>
+<flux:modal name="eliminar-propiedad" class="md:w-[500px]">
+    <div class="space-y-4">
+        <div>
+            <flux:heading size="lg">Confirmar eliminación</flux:heading>
+            <flux:subheading>
+                ¿Seguro que deseas eliminar la propiedad <strong>{{ $propiedadNombre }}</strong>?
+                Esta acción no se puede deshacer.
+            </flux:subheading>
+        </div>
 
         @if ($error)
-            <div class="alert alert-error">{{ $error }}</div>
+            <flux:callout color="red" icon="exclamation-triangle">
+                {{ $error }}
+            </flux:callout>
         @endif
 
-        <div class="modal-action">
-            <form method="dialog"><button class="btn">Cancelar</button></form>
+        <div class="flex gap-2 justify-end">
+            <flux:modal.close>
+                <flux:button variant="ghost">Cancelar</flux:button>
+            </flux:modal.close>
+
             @if (!$error)
-                <button wire:click="eliminar" class="btn btn-error">
-                    <span wire:loading.remove>Eliminar</span>
-                    <span wire:loading class="loading loading-spinner"></span>
-                </button>
+                <flux:button wire:click="eliminar" variant="danger">
+                    <span wire:loading.remove wire:target="eliminar">Eliminar</span>
+                    <span wire:loading wire:target="eliminar">Eliminando...</span>
+                </flux:button>
             @endif
         </div>
     </div>
-    <form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
-</dialog>
+</flux:modal>
 ```
 
-### Helpers globales: gestión de modales daisyUI desde Livewire
+### Sistema de modales y toasts (Flux nativo)
 
-> daisyUI usa `<dialog>` nativo. Para abrir/cerrar desde eventos Livewire, agregamos un script global en el layout:
+> **Importante:** con Flux **no** necesitas scripts globales para abrir/cerrar modales ni un componente custom de toasts. Flux maneja ambos internamente.
 
-`resources/views/components/layouts/app.blade.php` (al final, antes de `</body>`):
+**Modales:**
+- Abrir desde un trigger Blade: `<flux:modal.trigger name="form-propiedad"><flux:button>Abrir</flux:button></flux:modal.trigger>`.
+- Abrir desde el componente PHP: `Flux::modal('form-propiedad')->show();`.
+- Cerrar desde el componente PHP: `Flux::modal('form-propiedad')->close();`.
+- Cerrar desde Blade: `<flux:modal.close><flux:button>Cancelar</flux:button></flux:modal.close>`.
 
-```blade
-<script>
-    document.addEventListener('livewire:init', () => {
-        Livewire.on('mostrar-modal', ({ id }) => document.getElementById(id)?.showModal());
-        Livewire.on('cerrar-modal', ({ id }) => document.getElementById(id)?.close());
-    });
-</script>
-```
+**Toasts:**
+- Disparar desde el componente PHP: `Flux::toast(text: 'Operación exitosa.', variant: 'success');`.
+- Variantes disponibles: `success`, `warning`, `danger`, `info` (default).
+- El componente `<flux:toast>` ya está incluido en el layout principal del starter kit. Si no lo encuentras, agrégalo una vez en `resources/views/components/layouts/app.blade.php` antes de `</body>`:
+  ```blade
+  <flux:toast />
+  ```
 
-### Toasts globales
-
-Crear `components::toast-global` (un solo componente reusable que escucha el evento `toast`):
-
-```bash
-php artisan make:livewire toast-global
-```
-
-`resources/views/components/⚡toast-global.blade.php`:
-
-```blade
-<?php
-
-use Livewire\Component;
-use Livewire\Attributes\On;
-
-new class extends Component {
-    public array $mensajes = [];
-
-    #[On('toast')]
-    public function recibir(string $tipo, string $mensaje): void
-    {
-        $id = uniqid();
-        $this->mensajes[] = ['id' => $id, 'tipo' => $tipo, 'texto' => $mensaje];
-        $this->dispatch('quitar-toast', id: $id)->self();
-    }
-
-    #[On('quitar-toast')]
-    public function quitar(string $id): void
-    {
-        $this->mensajes = array_values(array_filter($this->mensajes, fn ($m) => $m['id'] !== $id));
-    }
-}; ?>
-
-<div class="toast toast-end z-50">
-    @foreach ($mensajes as $msg)
-        <div class="alert alert-{{ $msg['tipo'] === 'success' ? 'success' : ($msg['tipo'] === 'error' ? 'error' : 'info') }}"
-             x-data="{}"
-             x-init="setTimeout(() => $wire.quitar('{{ $msg['id'] }}'), 4000)">
-            <span>{{ $msg['texto'] }}</span>
-        </div>
-    @endforeach
-</div>
-```
-
-Incluirlo en el layout principal: `<livewire:toast-global />`.
+> **Esto reemplaza al componente custom `toast-global` y al script de modales daisyUI mencionados en versiones previas del plan.**
 
 ## Componentes para cuartos
 
@@ -1032,11 +997,12 @@ php artisan make:livewire cuartos.modal-cambiar-estado
 
 ### Notas para `pages::cuartos.tablero`
 - Recibe `$propiedad` por route binding.
-- Layout en grid de tarjetas, no tabla. Cada tarjeta muestra código, precio, estado coloreado:
-  - `disponible` → `badge-success`
-  - `ocupado` → `badge-info`
-  - `reservado` → `badge-warning`
-  - `mantenimiento` → `badge-error`
+- Layout en grid de tarjetas (`<flux:card>`), no tabla. Cada tarjeta muestra código, precio, estado coloreado.
+- Colores de badge según estado (con `<flux:badge>`):
+  - `disponible` → `color="green"`
+  - `ocupado` → `color="blue"`
+  - `reservado` → `color="amber"`
+  - `mantenimiento` → `color="red"`
 - Filtros por estado y nivel.
 - Acciones por tarjeta: editar (admin), cambiar estado a/desde mantenimiento (admin), eliminar (admin si no tiene estancias).
 
@@ -1439,9 +1405,9 @@ public function guardar(EstanciaService $service): void
             userId: auth()->id()
         );
 
-        $this->cerrar();
+        Flux::modal('abrir-estancia')->close();
+        Flux::toast(text: "Estancia #{$estancia->id} abierta correctamente.", variant: 'success');
         $this->dispatch('estancia-abierta', id: $estancia->id);
-        $this->dispatch('toast', tipo: 'success', mensaje: "Estancia #{$estancia->id} abierta correctamente.");
         $this->redirect(route('estancias.detalle', $estancia), navigate: true);
     } catch (\RuntimeException $e) {
         $this->addError('cuarto_id', $e->getMessage());
@@ -2015,13 +1981,16 @@ En `gastos.tabla`, el botón de "Ver comprobante":
 
 ```blade
 @if ($gasto->comprobante_path)
-    <button wire:click="verComprobante({{ $gasto->id }})"
-            class="btn btn-sm btn-ghost"
-            title="Ver comprobante">
+    <flux:button
+        wire:click="verComprobante({{ $gasto->id }})"
+        size="xs"
+        variant="ghost"
+        icon="eye"
+        title="Ver comprobante">
         Ver
-    </button>
+    </flux:button>
 @else
-    <span class="text-base-content/30 text-sm">Sin comprobante</span>
+    <span class="text-zinc-400 text-sm">Sin comprobante</span>
 @endif
 ```
 
@@ -2041,7 +2010,7 @@ public function verComprobante(int $gastoId): void
 }
 ```
 
-> El componente `<livewire:visor-pdf />` se incluye una sola vez en el layout principal (igual que `<livewire:toast-global />`), escucha el evento `abrir-visor-pdf` y se encarga de mostrarse.
+> El componente `<livewire:visor-pdf />` se incluye una sola vez en el layout principal (igual que `<flux:toast />`), escucha el evento `abrir-visor-pdf` y se encarga de mostrarse.
 
 ## Policies
 
@@ -2243,11 +2212,14 @@ class PagoController extends Controller
 El botón es una ruta GET directa, sin Livewire ni eventos:
 
 ```blade
-<a href="{{ route('recibos.pdf', $pago) }}"
-   class="btn btn-sm btn-ghost"
-   title="Descargar recibo">
-    <span>Recibo</span>
-</a>
+<flux:button
+    href="{{ route('recibos.pdf', $pago) }}"
+    size="xs"
+    variant="ghost"
+    icon="arrow-down-tray"
+    title="Descargar recibo">
+    Recibo
+</flux:button>
 ```
 
 El navegador descarga automáticamente `REC-2026-000001.pdf`.
@@ -2352,9 +2324,64 @@ php artisan make:livewire reportes.barra-ocupacion
 ```
 
 ### `pages::dashboard`
-- Cards: ocupación actual, ingresos del mes (devengado), gastos del mes, ganancia neta.
-- Gráfico últimos 6 meses (Chart.js vía CDN o ApexCharts).
-- Últimos 10 pagos y últimos 10 gastos.
+- Cards: ocupación actual, ingresos del mes (devengado), gastos del mes, ganancia neta. Usar `<flux:card>` y `<flux:heading>`.
+- Gráfico de últimos 6 meses con Chart.js (instalado vía npm en Fase 0).
+- Últimos 10 pagos y últimos 10 gastos (tablas Flux compactas).
+
+### Implementación de Chart.js
+
+Antes de usarlo, importar y registrar los componentes que se necesiten en `resources/js/app.js`:
+
+```js
+import {
+    Chart,
+    LineController, LineElement, PointElement,
+    BarController, BarElement,
+    LinearScale, CategoryScale,
+    Tooltip, Legend, Filler,
+} from 'chart.js';
+
+Chart.register(
+    LineController, LineElement, PointElement,
+    BarController, BarElement,
+    LinearScale, CategoryScale,
+    Tooltip, Legend, Filler,
+);
+
+// Exportar globalmente para que esté disponible en componentes Livewire
+window.Chart = Chart;
+```
+
+Después en el componente Livewire:
+
+```blade
+<div wire:ignore x-data="grafico({{ Js::from($datos) }})" x-init="render()">
+    <canvas x-ref="canvas" class="w-full h-64"></canvas>
+</div>
+
+<script>
+    function grafico(datos) {
+        return {
+            chart: null,
+            render() {
+                this.chart = new Chart(this.$refs.canvas, {
+                    type: 'line',
+                    data: {
+                        labels: datos.labels,
+                        datasets: [
+                            { label: 'Ingresos', data: datos.ingresos, borderColor: '#22c55e', tension: 0.3 },
+                            { label: 'Egresos',  data: datos.egresos,  borderColor: '#ef4444', tension: 0.3 },
+                        ],
+                    },
+                    options: { responsive: true, maintainAspectRatio: false },
+                });
+            }
+        };
+    }
+</script>
+```
+
+> `wire:ignore` evita que Livewire re-renderice el `<canvas>` al actualizar y rompa el gráfico. Para refrescar datos, usar `chart.data = nuevoData; chart.update();`.
 
 ### `pages::reportes.flujo-caja`
 - Selectores: rango de fechas (default año actual), vista (devengado/caja).
@@ -2506,20 +2533,32 @@ public function mount(int $id): void
 ### Verificar permiso en Blade
 ```blade
 @can('create', App\Models\Propiedad::class)
-    <button class="btn btn-primary">Nueva</button>
+    <flux:button variant="primary">Nueva</flux:button>
 @endcan
 ```
 
 ### Confirmación rápida
 ```blade
-<button wire:click="eliminar({{ $item->id }})"
-        wire:confirm="¿Seguro que deseas eliminar este registro?"
-        class="btn btn-error btn-sm">Eliminar</button>
+<flux:button
+    wire:click="eliminar({{ $item->id }})"
+    wire:confirm="¿Seguro que deseas eliminar este registro?"
+    variant="danger" size="xs">Eliminar</flux:button>
 ```
 
 ### Toast desde un componente
 ```php
-$this->dispatch('toast', tipo: 'success', mensaje: 'Operación exitosa.');
+use Flux\Flux;
+
+Flux::toast(text: 'Operación exitosa.', variant: 'success');
+// Variantes: success, warning, danger, info (default)
+```
+
+### Modal desde un componente
+```php
+use Flux\Flux;
+
+Flux::modal('nombre-del-modal')->show();
+Flux::modal('nombre-del-modal')->close();
 ```
 
 ### Ruta protegida por rol
@@ -2540,7 +2579,9 @@ $propiedades = Propiedad::withCount('cuartos')->paginate(15);
 - **Cast `decimal:2`**: Eloquent retorna **string**, no float. Para sumas en PHP, usa `(float)` explícito o BCMath.
 - **Livewire v4 SFC**: el archivo lleva `⚡` (U+26A1) en el nombre — lo agrega `make:livewire`. No lo escribas a mano. El nombre lógico del componente es `pages::propiedades.index`, no `pages::propiedades.⚡index`.
 - **Layout en página**: usa el atributo `#[Layout('components.layouts.app')]` en la clase del SFC página. Si no lo defines, Livewire usa el layout por defecto del starter kit.
-- **Modales daisyUI**: usan `<dialog>` nativo. Open/close con `document.getElementById('id').showModal()` y `.close()`. Los conectamos a eventos Livewire en el layout (ver Fase 1).
+- **Modales en Flux**: cada modal tiene un `name` único. Se abre con `<flux:modal.trigger>` o `Flux::modal('name')->show()`, y se cierra con `<flux:modal.close>` o `Flux::modal('name')->close()`. NO uses `<dialog>` nativo ni `document.getElementById(...).showModal()` — eso era el patrón daisyUI.
+- **Toasts en Flux**: `Flux::toast(text: '...', variant: 'success')` desde el componente PHP. El componente `<flux:toast />` ya viene en el layout del starter kit; si no, agregarlo una vez antes de `</body>`.
+- **Date picker en Free**: Flux Pro tiene date picker, pero Free no. Para SGA-SM se usa `<flux:input type="date" />` (input nativo HTML5 envuelto en estilo Flux). Suficiente para todos los casos del sistema.
 - **Livewire 4 + paginación**: Tailwind por defecto. `WithPagination` trait sigue funcionando igual que en v3.
 - **Soft deletes y unique**: `Rule::unique(...)->whereNull('deleted_at')` cuando aplique.
 - **Locks y transacciones**: `lockForUpdate()` solo dentro de `DB::transaction()`. Sin transacción, MySQL lo ignora.
@@ -2557,10 +2598,11 @@ $propiedades = Propiedad::withCount('cuartos')->paginate(15);
 - Livewire v4 Components (SFC): https://livewire.laravel.com/docs/4.x/components
 - Fortify: https://laravel.com/docs/13.x/fortify
 - Boost: https://laravel.com/docs/13.x/boost
-- daisyUI: https://daisyui.com/
+- Flux UI: https://fluxui.dev/docs
+- Chart.js: https://www.chartjs.org/docs/latest/
 - dompdf Laravel: https://github.com/barryvdh/laravel-dompdf
 
 ---
 
-*Plan operativo de desarrollo · Versión 2.1 · Mayo 2026*
-*Stack: Laravel 13 + Livewire 4 SFC + Tailwind/daisyUI + MySQL 8 + Fortify + Boost · Recibos on-demand · Comprobantes con visor PDF*
+*Plan operativo de desarrollo · Versión 3.0 · Mayo 2026*
+*Stack: Laravel 13 + Livewire 4 SFC + Flux Free + Chart.js + MySQL 8 + Fortify + Boost · Recibos on-demand · Comprobantes con visor PDF*

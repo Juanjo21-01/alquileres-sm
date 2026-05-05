@@ -4,10 +4,10 @@ Aplicación web para la gestión de alquileres (inmuebles), contratos, pagos y c
 
 ## Requisitos
 
-- PHP 8.2+
+- PHP 8.3+
 - Composer
-- Node.js 18+
-- MySQL/MariaDB
+- Node.js 24+
+- MySQL
 
 ## Instalación
 

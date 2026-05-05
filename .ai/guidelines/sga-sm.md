@@ -1,15 +1,18 @@
 # SGA-SM · Guidelines del Proyecto
 
 ## Sobre el proyecto
-Sistema web de gestión de alquileres de cuartos para estudiantes y personal de salud en San Marcos, Guatemala. Stack: Laravel 13 + Livewire 4 (SFC) + Tailwind + daisyUI + MySQL 8 + Fortify + dompdf + Laravel Boost.
+
+Sistema web de gestión de alquileres de cuartos para estudiantes y personal de salud en San Marcos, Guatemala. Stack: Laravel 13 + Livewire 4 (SFC) + **Flux Free** (UI) + Tailwind + **Chart.js** (npm) + MySQL 8 + Fortify + dompdf + Laravel Boost.
 
 ## Documentación de referencia
+
 - Especificación funcional: `docs/Documentacion_SGA-SM.docx`
 - Plan de desarrollo fase por fase: `docs/plan_desarrollo.md` ← **seguir estrictamente**
 
 ## Convenciones inviolables
 
 ### Idioma
+
 - **Tablas, columnas, modelos, métodos y rutas del dominio del negocio: español**.
 - **Excepción intencional:** `users` y `App\Models\User` se mantienen en inglés (convención de Laravel/Fortify). Esa tabla representa al operador del sistema, no al dominio de alquileres. Los inquilinos viven en su propia tabla en español. La columna `name` en `users` también se mantiene en inglés.
 - Tablas dominio: snake_case plural en español (`propiedades`, `cuartos`, `extras_estancia`, `categorias_gasto`).
@@ -18,6 +21,7 @@ Sistema web de gestión de alquileres de cuartos para estudiantes y personal de 
 - Rutas: kebab-case en español (`/propiedades`, `/extras-estancia`).
 
 ### Componentes Livewire — Single-File Components (SFC) v4
+
 - **Formato exclusivo: SFC**. La clase PHP y la vista Blade van en el mismo archivo `.blade.php` con bloque `<?php new class extends Component { ... }; ?>` arriba del HTML.
 - **NO usar `--mfc` (multi-file components)**.
 - **NO usar el patrón class-based de v2/v3** (clase PHP separada en `app/Livewire/`).
@@ -28,12 +32,14 @@ Sistema web de gestión de alquileres de cuartos para estudiantes y personal de 
 - El símbolo `⚡` en el nombre del archivo lo agrega `make:livewire` automáticamente.
 
 ### Datos y dinero
+
 - Dinero: `decimal(10,2)` siempre. Nunca `float`.
 - Cast Eloquent retorna string en `decimal:2` — usar `(float)` explícito para operaciones aritméticas.
 - Fechas: UTC en BD, presentación con timezone `America/Guatemala`.
 - Soft deletes activos en: `inquilinos`, `estancias`, `pagos`, `gastos`.
 
 ### Arquitectura
+
 - Estructura estándar de Laravel + carpetas `app/Services/` y `app/Observers/`.
 - **NO** usar arquitectura tipo DDD (sin carpeta `Domain/`).
 - Lógica de negocio transaccional: en `app/Services/`. Los componentes Livewire **solo orquestan** (UI, validación, llamada al service).
@@ -42,28 +48,37 @@ Sistema web de gestión de alquileres de cuartos para estudiantes y personal de 
 - Para evitar race conditions: `lockForUpdate()` en consultas críticas (siempre dentro de transacción).
 
 ### Autenticación y autorización
+
 - Auth: Laravel Fortify (viene con starter kit Livewire). **Registro público deshabilitado** — solo admin crea usuarios.
 - Tabla `roles` normalizada con FK `rol_id` desde `users`. Modelo `Rol` con constantes `COD_ADMIN`, `COD_ENCARGADO`, `COD_INQUILINO` (futuro).
 - Autorización: Policies + Gates + middleware `rol` nativo. **NO usar `spatie/laravel-permission`**.
 - Roles iniciales seed: `administrador`, `encargado`. Preparado para `inquilino` a futuro sin migración.
 
 ### Validación
+
 - En FormRequests para controllers, o en `protected function rules()` en SFCs Livewire.
 - Estados: enum en BD + constantes en el modelo (ej. `Cuarto::ESTADO_DISPONIBLE`).
 
-### UX
-- Modales daisyUI (`<dialog>`) controlados con eventos Livewire (`mostrar-modal`, `cerrar-modal`).
-- Toasts globales con un único componente `<livewire:toast-global />` que escucha el evento `toast`.
-- Loading states con `wire:loading` en todos los botones de acción.
-- Empty states con CTA en tablas vacías.
-- Confirmación con modales explícitos para acciones destructivas (no solo `wire:confirm`).
+### UX y librería de componentes
+
+- **Componentes UI: Flux Free** (`livewire/flux` ya viene en el starter kit). Todos los botones, modales, inputs, selects, tablas, badges, toasts, dropdowns, switches usan componentes Flux: `<flux:button>`, `<flux:modal>`, `<flux:input>`, `<flux:select>`, `<flux:table>`, `<flux:badge>`, etc.
+- **NO usar daisyUI** ni librerías equivalentes — todo va con Flux + Tailwind directo cuando hace falta personalizar.
+- **Modales en Flux**: cada modal tiene un `name` único. Se abre con `<flux:modal.trigger>` o `Flux::modal('name')->show()`. Se cierra con `<flux:modal.close>` o `Flux::modal('name')->close()`. NO usar `<dialog>` nativo.
+- **Toasts en Flux**: `Flux::toast(text: '...', variant: 'success')` desde el componente PHP. El `<flux:toast />` ya viene en el layout del starter kit.
+- **Date picker**: usar `<flux:input type="date" />` (HTML5 nativo dentro del estilo Flux). Flux Pro tiene date picker visual pero no es necesario para SGA-SM.
+- **Gráficos**: Chart.js instalado vía npm (`npm install chart.js`), importado y registrado en `resources/js/app.js`. Usar dentro de elementos con `wire:ignore` y Alpine.js para inicializar.
+- **Loading states**: `wire:loading` y `wire:loading.remove` con `wire:target` específico.
+- **Empty states con CTA** en tablas vacías.
+- **Confirmación con modales explícitos** para acciones destructivas (no solo `wire:confirm`).
 
 ### Estrategia de archivos generados vs subidos
+
 - **Recibos PDF (generados):** NO se persisten. Se generan on-demand con `ReciboPdfService::descargar($pago)` cada vez que el usuario los descarga. Los datos del pago son inmutables, así que el PDF reconstruido es idéntico al original. Esto evita llenar disco con miles de archivos derivados.
 - **Comprobantes de gastos (subidos por el usuario):** SÍ se persisten en `storage/app/comprobantes/` (disco `local`). En producción se migran a S3 cambiando `FILESYSTEM_DISK` en `.env`.
 - **Visor PDF:** se porta del proyecto previo `expedientes-codede`, no se re-implementa. Recibos van por descarga directa; comprobantes se ven inline en el visor con opción de descarga.
 
 ### Constraint crítico (Fase 2)
+
 - Estancias: índice único parcial sobre `cuarto_id` donde `estado='activa' AND deleted_at IS NULL`.
 - En MySQL 8: columna virtual generada + UNIQUE en una sola sentencia ALTER (ver `docs/plan_desarrollo.md` sección 2.3).
 
@@ -83,4 +98,5 @@ Sistema web de gestión de alquileres de cuartos para estudiantes y personal de 
 12. **Usa Laravel Boost MCP**: cuando dudes sobre sintaxis de Laravel/Livewire/Tailwind, consulta la documentation API de Boost (`Search Docs` MCP tool) en lugar de adivinar.
 
 ## Estado actual
+
 Setup inicial recién completado con Laravel 13 + starter kit Livewire + Boost. Próximo: ajustes finales de Fase 0 (locale, daisyUI, deshabilitar registro, dompdf, estructura de carpetas) y luego Fase 1 (roles, propiedades y cuartos).

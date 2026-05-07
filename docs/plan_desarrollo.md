@@ -93,19 +93,19 @@
 
 - [ ] Verificar `.env`:
   ```dotenv
-  APP_NAME="SGA-SM"
+  APP_NAME="Alquileres SM"
   APP_TIMEZONE=America/Guatemala
   APP_LOCALE=es
   APP_FALLBACK_LOCALE=es
   APP_FAKER_LOCALE=es_GT
   DB_CONNECTION=mysql
-  DB_DATABASE=sga_sm
+  DB_DATABASE=alquileres_sm
   ```
 - [ ] Editar `config/app.php`:
   - `'timezone' => 'America/Guatemala'`
   - `'locale' => 'es'`
   - `'faker_locale' => 'es_GT'`
-- [ ] Crear BD: `CREATE DATABASE sga_sm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
+- [ ] Crear BD: `CREATE DATABASE alquileres_sm CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
 - [ ] Verificar que el archivo de traducciones `lang/es.json` exista (si no, crearlo vacío para empezar).
 
 ### Instalación de Chart.js (para reportes en Fase 5)

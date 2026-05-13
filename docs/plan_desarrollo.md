@@ -72,7 +72,7 @@
 | 0 | Ajustes post-scaffold | 1-2 días |
 | 1 | Roles, propiedades y cuartos | 1 semana |
 | 2 | Inquilinos y estancias | 1.5 semanas |
-| 3 | Ingresos (pagos) | 1 semana |
+| 3 | Ingresos (pagos y parqueo externo) | 1.5 semanas |
 | 4 | Egresos (gastos) | 4-5 días |
 | 5 | PDF y reportes | 1-1.5 semanas |
 | 6 | Pulido final y despliegue | 4-5 días |
@@ -1078,12 +1078,15 @@ Schema::create('inquilinos', function (Blueprint $table) {
     $table->string('institucion', 150)->nullable();
     $table->string('contacto_emergencia_nombre', 150)->nullable();
     $table->string('contacto_emergencia_telefono', 8)->nullable();
+    $table->enum('vehiculo_tipo', ['carro', 'moto'])->nullable();
+    $table->string('vehiculo_placa', 20)->nullable();
     $table->text('notas')->nullable();
     $table->timestamps();
     $table->softDeletes();
 
     $table->index(['nombres', 'apellidos']);
     $table->index('telefono');
+    $table->index('vehiculo_placa');
 });
 ```
 
@@ -1177,11 +1180,17 @@ class Inquilino extends Model
     protected $table = 'inquilinos';
     protected $fillable = [
         'nombres','apellidos','dpi','telefono','email','ocupacion',
-        'institucion','contacto_emergencia_nombre','contacto_emergencia_telefono','notas',
+        'institucion','contacto_emergencia_nombre','contacto_emergencia_telefono',
+        'vehiculo_tipo','vehiculo_placa','notas',
     ];
+
+    public const VEHICULO_CARRO = 'carro';
+    public const VEHICULO_MOTO  = 'moto';
 
     public function estancias() { return $this->hasMany(Estancia::class); }
     public function estanciaActiva() { return $this->hasOne(Estancia::class)->where('estado', 'activa'); }
+
+    public function tieneVehiculo(): bool { return !is_null($this->vehiculo_tipo); }
 
     public function getNombreCompletoAttribute(): string
     {
@@ -1456,13 +1465,45 @@ Route::middleware('auth')->group(function () {
 
 ---
 
-# Fase 3 — Ingresos (pagos)
+# Fase 3 — Ingresos (pagos y parqueo externo)
 
-**Objetivo:** registrar pagos asociados a estancias activas con tipos diferenciados (anticipo / mensualidad / extra / depósito), descuentos manuales con motivo, mes aplicado y método de pago. Generación automática del recibo PDF se prepara aquí (la plantilla completa va en Fase 5).
+**Objetivo:** registrar pagos asociados a estancias activas con tipos diferenciados (anticipo / mensualidad / extra / depósito) desde catálogo `tipos_pago`, descuentos manuales con motivo, mes aplicado y método de pago. Además, gestionar el alquiler de parqueo a personas externas (que no rentan cuartos) con su propio flujo independiente. Generación de recibo PDF se prepara aquí (plantilla completa en Fase 5).
 
-**Duración:** 1 semana.
+**Duración:** 1.5 semanas.
 
-## Migración: `pagos`
+**Trabajo por bloques (orden estricto):**
+1. Migraciones (`tipos_pago`, `pagos`, `arrendatarios_parqueo`, `alquileres_parqueo`).
+2. Modelos (`TipoPago`, `Pago`, `ArrendatarioParqueo`, `AlquilerParqueo`).
+3. Seeders (`TipoPagoSeeder`).
+4. Services (`PagoService`, `AlquilerParqueoService`).
+5. Policies.
+6. Componentes Livewire SFC (módulo pagos + módulo parqueo externo).
+7. Rutas.
+
+> **Sobre parqueo externo:** los inquilinos que rentan cuartos ya incluyen parqueo, pero también se alquila el parqueo por mes a personas externas (típicamente doctores). Ese flujo es independiente del de cuartos: tabla propia, sin recibo correlativo, sin afectar el flujo de caja principal. Se reporta aparte en Fase 5.
+
+---
+
+## Bloque 1 — Migraciones
+
+### 3.1 `tipos_pago` (catálogo)
+
+```bash
+php artisan make:migration create_tipos_pago_table
+```
+
+```php
+Schema::create('tipos_pago', function (Blueprint $table) {
+    $table->id();
+    $table->string('nombre', 80)->unique();           // "Mensualidad", "Anticipo"
+    $table->string('codigo', 30)->unique();           // 'mensualidad', 'anticipo'
+    $table->boolean('requiere_mes')->default(false);  // solo 'mensualidad' = true
+    $table->boolean('activo')->default(true);
+    $table->timestamps();
+});
+```
+
+### 3.2 `pagos`
 
 ```bash
 php artisan make:migration create_pagos_table
@@ -1472,9 +1513,9 @@ php artisan make:migration create_pagos_table
 Schema::create('pagos', function (Blueprint $table) {
     $table->id();
     $table->foreignId('estancia_id')->constrained('estancias')->restrictOnDelete();
+    $table->foreignId('tipo_pago_id')->constrained('tipos_pago')->restrictOnDelete();
     $table->date('fecha_pago');
     $table->date('mes_aplicado')->nullable();
-    $table->enum('tipo', ['anticipo', 'mensualidad', 'extra', 'deposito']);
     $table->decimal('monto_bruto', 10, 2);
     $table->decimal('descuento', 10, 2)->default(0);
     $table->string('motivo_descuento', 255)->nullable();
@@ -1489,13 +1530,99 @@ Schema::create('pagos', function (Blueprint $table) {
 
     $table->index(['estancia_id', 'fecha_pago']);
     $table->index('mes_aplicado');
-    $table->index(['tipo', 'fecha_pago']);
+    $table->index(['tipo_pago_id', 'fecha_pago']);
 });
 ```
 
 > **Nota sobre PDFs:** no almacenamos `recibo_pdf_path` porque los recibos se generan **on-demand** desde `ReciboPdfService` cuando el usuario los descarga. Los datos del pago son inmutables (`monto_bruto`, `descuento`, `monto_neto`, `recibo_numero`), así que regenerar el PDF mañana o dentro de 5 años produce un archivo idéntico al que se entregó. Esto evita llenar disco con miles de PDFs y simplifica los backups.
 
-## Modelo
+> **Nota sobre parqueo:** la tabla `pagos` **no** lleva FK a `alquileres_parqueo`. El alquiler de parqueo a externos tiene su propia tabla independiente — se considera ingreso extra y se reporta por separado.
+
+### 3.3 `arrendatarios_parqueo`
+
+```bash
+php artisan make:migration create_arrendatarios_parqueo_table
+```
+
+```php
+Schema::create('arrendatarios_parqueo', function (Blueprint $table) {
+    $table->id();
+    $table->string('nombre_completo', 150);
+    $table->string('telefono', 8)->nullable();
+    $table->enum('ocupacion', ['estudiante', 'salud', 'otro'])->default('otro');
+    $table->string('placa', 20)->nullable();
+    $table->boolean('activo')->default(true);
+    $table->text('notas')->nullable();
+    $table->timestamps();
+
+    $table->index('nombre_completo');
+    $table->index('placa');
+    $table->index('activo');
+});
+```
+
+> Sin soft deletes — el flag `activo` cubre el caso "ya no renta parqueo pero queda en sistema".
+
+### 3.4 `alquileres_parqueo`
+
+```bash
+php artisan make:migration create_alquileres_parqueo_table
+```
+
+```php
+Schema::create('alquileres_parqueo', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('arrendatario_parqueo_id')
+          ->constrained('arrendatarios_parqueo')
+          ->restrictOnDelete();
+    $table->date('mes');                       // siempre día 1 del mes
+    $table->decimal('monto', 10, 2);           // manual cada mes (típicamente Q50-Q200)
+    $table->boolean('pagado')->default(false);
+    $table->date('fecha_pago')->nullable();    // cuándo se marcó pagado
+    $table->enum('metodo_pago', ['efectivo', 'cuenta'])->default('efectivo');
+    $table->text('notas')->nullable();         // detalles del carro/moto si hace falta
+    $table->foreignId('user_registro_id')->nullable()->constrained('users')->nullOnDelete();
+    $table->timestamps();
+
+    $table->index(['arrendatario_parqueo_id', 'mes']);
+    $table->index('mes');
+    $table->index('pagado');
+});
+```
+
+> Un arrendatario puede tener múltiples registros del mismo mes (caso raro: renta 2 espacios). No se aplica unique constraint sobre `(arrendatario_parqueo_id, mes)`.
+
+---
+
+## Bloque 2 — Modelos
+
+### `app/Models/TipoPago.php`
+
+```php
+<?php
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class TipoPago extends Model
+{
+    protected $table = 'tipos_pago';
+    protected $fillable = ['nombre', 'codigo', 'requiere_mes', 'activo'];
+    protected $casts = [
+        'requiere_mes' => 'boolean',
+        'activo'       => 'boolean',
+    ];
+
+    public const COD_ANTICIPO    = 'anticipo';
+    public const COD_MENSUALIDAD = 'mensualidad';
+    public const COD_EXTRA       = 'extra';
+    public const COD_DEPOSITO    = 'deposito';
+
+    public function pagos() { return $this->hasMany(Pago::class); }
+
+    public function scopeActivos($query) { return $query->where('activo', true); }
+}
+```
 
 ### `app/Models/Pago.php`
 
@@ -1512,7 +1639,7 @@ class Pago extends Model
 
     protected $table = 'pagos';
     protected $fillable = [
-        'estancia_id','fecha_pago','mes_aplicado','tipo',
+        'estancia_id','tipo_pago_id','fecha_pago','mes_aplicado',
         'monto_bruto','descuento','motivo_descuento','monto_neto',
         'metodo_pago','referencia','recibo_numero',
         'notas','user_registro_id',
@@ -1525,20 +1652,123 @@ class Pago extends Model
         'monto_neto'   => 'decimal:2',
     ];
 
-    public const TIPO_ANTICIPO    = 'anticipo';
-    public const TIPO_MENSUALIDAD = 'mensualidad';
-    public const TIPO_EXTRA       = 'extra';
-    public const TIPO_DEPOSITO    = 'deposito';
-
     public const METODO_EFECTIVO = 'efectivo';
     public const METODO_CUENTA   = 'cuenta';
 
     public function estancia()    { return $this->belongsTo(Estancia::class); }
+    public function tipoPago()    { return $this->belongsTo(TipoPago::class); }
     public function userRegistro(){ return $this->belongsTo(User::class, 'user_registro_id'); }
 }
 ```
 
-## Service: `PagoService`
+### `app/Models/ArrendatarioParqueo.php`
+
+```php
+<?php
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class ArrendatarioParqueo extends Model
+{
+    protected $table = 'arrendatarios_parqueo';
+    protected $fillable = [
+        'nombre_completo','telefono','ocupacion','placa','activo','notas',
+    ];
+    protected $casts = ['activo' => 'boolean'];
+
+    public const OCUPACION_ESTUDIANTE = 'estudiante';
+    public const OCUPACION_SALUD      = 'salud';
+    public const OCUPACION_OTRO       = 'otro';
+
+    public function alquileres() { return $this->hasMany(AlquilerParqueo::class); }
+
+    public function scopeActivos($query) { return $query->where('activo', true); }
+}
+```
+
+### `app/Models/AlquilerParqueo.php`
+
+```php
+<?php
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class AlquilerParqueo extends Model
+{
+    protected $table = 'alquileres_parqueo';
+    protected $fillable = [
+        'arrendatario_parqueo_id','mes','monto','pagado','fecha_pago',
+        'metodo_pago','notas','user_registro_id',
+    ];
+    protected $casts = [
+        'mes'        => 'date',
+        'fecha_pago' => 'date',
+        'monto'      => 'decimal:2',
+        'pagado'     => 'boolean',
+    ];
+
+    public const METODO_EFECTIVO = 'efectivo';
+    public const METODO_CUENTA   = 'cuenta';
+
+    public function arrendatario()
+    {
+        return $this->belongsTo(ArrendatarioParqueo::class, 'arrendatario_parqueo_id');
+    }
+
+    public function userRegistro() { return $this->belongsTo(User::class, 'user_registro_id'); }
+}
+```
+
+---
+
+## Bloque 3 — Seeder
+
+### `database/seeders/TipoPagoSeeder.php`
+
+```bash
+php artisan make:seeder TipoPagoSeeder
+```
+
+```php
+<?php
+namespace Database\Seeders;
+
+use App\Models\TipoPago;
+use Illuminate\Database\Seeder;
+
+class TipoPagoSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $tipos = [
+            ['codigo' => 'anticipo',    'nombre' => 'Anticipo',    'requiere_mes' => false],
+            ['codigo' => 'mensualidad', 'nombre' => 'Mensualidad', 'requiere_mes' => true],
+            ['codigo' => 'extra',       'nombre' => 'Extra',       'requiere_mes' => false],
+            ['codigo' => 'deposito',    'nombre' => 'Depósito',    'requiere_mes' => false],
+        ];
+
+        foreach ($tipos as $t) {
+            TipoPago::updateOrCreate(['codigo' => $t['codigo']], $t + ['activo' => true]);
+        }
+    }
+}
+```
+
+Registrar en `DatabaseSeeder::run()`:
+
+```php
+$this->call([
+    RolSeeder::class,
+    TipoPagoSeeder::class,
+    // ...
+]);
+```
+
+---
+
+## Bloque 4 — Services
 
 ### `app/Services/PagoService.php`
 
@@ -1548,6 +1778,7 @@ namespace App\Services;
 
 use App\Models\Estancia;
 use App\Models\Pago;
+use App\Models\TipoPago;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -1557,9 +1788,10 @@ class PagoService
     {
         return DB::transaction(function () use ($datos, $userId) {
             $estancia = Estancia::lockForUpdate()->findOrFail($datos['estancia_id']);
+            $tipoPago = TipoPago::findOrFail($datos['tipo_pago_id']);
 
-            if ($datos['tipo'] === Pago::TIPO_MENSUALIDAD && empty($datos['mes_aplicado'])) {
-                throw new RuntimeException('La mensualidad requiere mes aplicado.');
+            if ($tipoPago->requiere_mes && empty($datos['mes_aplicado'])) {
+                throw new RuntimeException("El tipo de pago '{$tipoPago->nombre}' requiere mes aplicado.");
             }
 
             $bruto     = round((float) $datos['monto_bruto'], 2);
@@ -1576,9 +1808,9 @@ class PagoService
 
             $pago = Pago::create([
                 'estancia_id'      => $estancia->id,
+                'tipo_pago_id'     => $tipoPago->id,
                 'fecha_pago'       => $datos['fecha_pago'],
-                'mes_aplicado'     => $datos['mes_aplicado'] ?? null,
-                'tipo'             => $datos['tipo'],
+                'mes_aplicado'     => $tipoPago->requiere_mes ? $datos['mes_aplicado'] : null,
                 'monto_bruto'      => $bruto,
                 'descuento'        => $descuento,
                 'motivo_descuento' => $descuento > 0 ? $datos['motivo_descuento'] : null,
@@ -1615,7 +1847,104 @@ class PagoService
 }
 ```
 
-## Componentes Livewire (SFC)
+### `app/Services/AlquilerParqueoService.php`
+
+```php
+<?php
+namespace App\Services;
+
+use App\Models\AlquilerParqueo;
+use App\Models\ArrendatarioParqueo;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use RuntimeException;
+
+class AlquilerParqueoService
+{
+    public function registrarMes(array $datos, ?int $userId = null): AlquilerParqueo
+    {
+        return DB::transaction(function () use ($datos, $userId) {
+            $arrendatario = ArrendatarioParqueo::findOrFail($datos['arrendatario_parqueo_id']);
+
+            if (!$arrendatario->activo) {
+                throw new RuntimeException('No se puede registrar un mes a un arrendatario inactivo.');
+            }
+
+            $monto = round((float) $datos['monto'], 2);
+            if ($monto <= 0) {
+                throw new RuntimeException('El monto debe ser mayor a cero.');
+            }
+
+            $mes = Carbon::parse($datos['mes'])->startOfMonth()->format('Y-m-d');
+
+            return AlquilerParqueo::create([
+                'arrendatario_parqueo_id' => $arrendatario->id,
+                'mes'                     => $mes,
+                'monto'                   => $monto,
+                'pagado'                  => $datos['pagado'] ?? false,
+                'fecha_pago'              => ($datos['pagado'] ?? false) ? ($datos['fecha_pago'] ?? now()) : null,
+                'metodo_pago'             => $datos['metodo_pago'] ?? AlquilerParqueo::METODO_EFECTIVO,
+                'notas'                   => $datos['notas'] ?? null,
+                'user_registro_id'        => $userId,
+            ]);
+        });
+    }
+
+    public function marcarPagado(AlquilerParqueo $alquiler, string $metodoPago, ?string $fechaPago = null): void
+    {
+        $alquiler->update([
+            'pagado'      => true,
+            'fecha_pago'  => $fechaPago ?? now()->toDateString(),
+            'metodo_pago' => $metodoPago,
+        ]);
+    }
+
+    public function marcarPendiente(AlquilerParqueo $alquiler): void
+    {
+        $alquiler->update([
+            'pagado'     => false,
+            'fecha_pago' => null,
+        ]);
+    }
+
+    public function desactivarArrendatario(ArrendatarioParqueo $arrendatario): void
+    {
+        $arrendatario->update(['activo' => false]);
+    }
+
+    public function activarArrendatario(ArrendatarioParqueo $arrendatario): void
+    {
+        $arrendatario->update(['activo' => true]);
+    }
+}
+```
+
+---
+
+## Bloque 5 — Policies
+
+```bash
+php artisan make:policy PagoPolicy --model=Pago
+php artisan make:policy ArrendatarioParqueoPolicy --model=ArrendatarioParqueo
+php artisan make:policy AlquilerParqueoPolicy --model=AlquilerParqueo
+```
+
+- **PagoPolicy:**
+  - `viewAny`, `view`, `create`: ambos roles.
+  - `update`: solo admin (no se editan; se anulan + crean nuevo).
+  - `delete`: solo admin.
+- **ArrendatarioParqueoPolicy:**
+  - `viewAny`, `view`, `create`, `update`: ambos roles.
+  - `delete`: solo admin (en la práctica se desactiva, no se elimina).
+- **AlquilerParqueoPolicy:**
+  - `viewAny`, `view`, `create`, `update`: ambos roles.
+  - `delete`: solo admin.
+
+---
+
+## Bloque 6 — Componentes Livewire (SFC)
+
+### Módulo pagos
 
 ```bash
 # Páginas
@@ -1629,13 +1958,13 @@ php artisan make:livewire pagos.historial-estancia
 php artisan make:livewire pagos.modal-eliminar
 ```
 
-### Notas clave para `pagos.form`
+#### Notas clave para `pagos.form`
 
 - Campos:
   - Selector de estancia activa (con info contextual: inquilino + cuarto + casa).
   - `fecha_pago` (default: hoy).
-  - `tipo` con radios visualmente claros.
-  - `mes_aplicado` visible solo si `tipo = mensualidad` (controlado con `wire:show`).
+  - `tipo_pago_id` — radios o select cargados desde `TipoPago::activos()->get()`.
+  - `mes_aplicado` visible solo si el tipo seleccionado tiene `requiere_mes = true` (lookup reactivo).
   - `monto_bruto`, `descuento`, `motivo_descuento` (condicional).
   - `monto_neto` calculado reactivamente:
     ```php
@@ -1646,6 +1975,14 @@ php artisan make:livewire pagos.modal-eliminar
     {
         return max(0, round((float)$this->monto_bruto - (float)$this->descuento, 2));
     }
+
+    #[Computed]
+    public function tipoRequiereMes(): bool
+    {
+        return $this->tipo_pago_id
+            ? (bool) \App\Models\TipoPago::find($this->tipo_pago_id)?->requiere_mes
+            : false;
+    }
     ```
   - `metodo_pago` (radio).
   - `referencia` visible solo si método = `cuenta`.
@@ -1655,9 +1992,9 @@ php artisan make:livewire pagos.modal-eliminar
   {
       return [
           'estancia_id'      => 'required|exists:estancias,id',
+          'tipo_pago_id'     => 'required|exists:tipos_pago,id',
           'fecha_pago'       => 'required|date',
-          'mes_aplicado'     => 'required_if:tipo,mensualidad|nullable|date',
-          'tipo'             => 'required|in:anticipo,mensualidad,extra,deposito',
+          'mes_aplicado'     => 'nullable|date',
           'monto_bruto'      => 'required|numeric|min:0.01',
           'descuento'        => 'nullable|numeric|min:0|lte:monto_bruto',
           'motivo_descuento' => 'required_if:descuento,>,0|nullable|string|max:255',
@@ -1666,46 +2003,120 @@ php artisan make:livewire pagos.modal-eliminar
       ];
   }
   ```
+  La validación de `mes_aplicado` cuando el tipo lo requiere se hace en `PagoService` (fuente única de verdad).
 - Al hacer set de `mes_aplicado`, normalizar al día 1: `Carbon::parse($value)->startOfMonth()->format('Y-m-d')`.
 
-### `pagos.historial-estancia`
+#### `pagos.historial-estancia`
 
 Componente embebible:
 ```blade
 <livewire:pagos.historial-estancia :estancia-id="$estancia->id" />
 ```
-Muestra los pagos agrupados por mes_aplicado, con totales por mes y total general.
+Muestra los pagos agrupados por `mes_aplicado`, con totales por mes y total general.
 
-## Policies
+### Módulo parqueo externo
 
 ```bash
-php artisan make:policy PagoPolicy --model=Pago
+# Páginas
+php artisan make:livewire pages::parqueo.index
+php artisan make:livewire pages::parqueo.detalle
+
+# Componentes reusables
+php artisan make:livewire parqueo.tabla-arrendatarios
+php artisan make:livewire parqueo.form-arrendatario
+php artisan make:livewire parqueo.tabla-meses
+php artisan make:livewire parqueo.form-mes
+php artisan make:livewire parqueo.modal-marcar-pagado
+php artisan make:livewire parqueo.modal-eliminar-mes
 ```
 
-- `viewAny`, `view`, `create`: ambos roles.
-- `update`: solo admin (no se editan, se anulan + crean nuevo).
-- `delete`: solo admin.
+#### `pages::parqueo.index`
 
-## Rutas
+- Tabla de arrendatarios (activos + inactivos con filtro).
+- Columnas: nombre, teléfono, ocupación, placa, estado (activo/inactivo), último mes registrado, acciones.
+- Botón "+ Nuevo arrendatario" abre modal con `parqueo.form-arrendatario`.
+- Click en fila → `pages::parqueo.detalle` con historial mensual.
+
+#### `pages::parqueo.detalle`
+
+- Datos del arrendatario en header.
+- Tabla mensual (`parqueo.tabla-meses`): mes, monto, pagado/pendiente, método, fecha pago, acciones.
+- Botón "+ Registrar mes" abre modal con `parqueo.form-mes`.
+- Acción rápida "Marcar pagado" desde la fila pendiente.
+
+#### `parqueo.form-arrendatario`
+
+Validación:
+```php
+protected function rules(): array
+{
+    return [
+        'nombre_completo' => 'required|string|max:150',
+        'telefono'        => 'nullable|string|max:8',
+        'ocupacion'       => 'required|in:estudiante,salud,otro',
+        'placa'           => 'nullable|string|max:20',
+        'activo'          => 'boolean',
+        'notas'           => 'nullable|string',
+    ];
+}
+```
+
+#### `parqueo.form-mes`
+
+Validación:
+```php
+protected function rules(): array
+{
+    return [
+        'arrendatario_parqueo_id' => 'required|exists:arrendatarios_parqueo,id',
+        'mes'                     => 'required|date',
+        'monto'                   => 'required|numeric|min:0.01',
+        'pagado'                  => 'boolean',
+        'fecha_pago'              => 'nullable|date|required_if:pagado,true',
+        'metodo_pago'             => 'required|in:efectivo,cuenta',
+        'notas'                   => 'nullable|string',
+    ];
+}
+```
+
+---
+
+## Bloque 7 — Rutas
 
 ```php
 Route::middleware('auth')->group(function () {
+    // Pagos
     Route::get('/pagos', App\Livewire\Pages\Pagos\Index::class)->name('pagos.index');
     Route::get('/pagos/registrar', App\Livewire\Pages\Pagos\Registrar::class)
         ->name('pagos.registrar');
+
+    // Parqueo externo
+    Route::get('/parqueo', App\Livewire\Pages\Parqueo\Index::class)->name('parqueo.index');
+    Route::get('/parqueo/{arrendatario}', App\Livewire\Pages\Parqueo\Detalle::class)
+        ->name('parqueo.detalle');
 });
 ```
 
 ## Criterios de aceptación
 
+**Pagos (cuartos):**
 - ✅ Se registra un pago asociado a una estancia activa.
+- ✅ El tipo de pago se selecciona desde el catálogo `tipos_pago`.
+- ✅ Si el tipo seleccionado tiene `requiere_mes = true` y no se manda mes, falla.
 - ✅ El monto neto se calcula reactivamente en la UI.
 - ✅ Sin motivo de descuento (cuando hay descuento), falla la validación.
 - ✅ Si descuento > bruto, falla.
 - ✅ Correlativo de recibo único y secuencial por año.
-- ✅ Mensualidad sin mes aplicado falla.
 - ✅ Historial por estancia muestra agrupación por mes.
 - ✅ Solo admin puede eliminar pagos.
+
+**Parqueo externo:**
+- ✅ Se crea un arrendatario con datos mínimos (nombre, teléfono, placa opcional).
+- ✅ Se registra un mes con monto manual (típicamente Q50-Q200).
+- ✅ Un arrendatario puede tener múltiples meses registrados; también múltiples registros del mismo mes (caso 2 espacios).
+- ✅ "Marcar pagado" actualiza `pagado=true` y graba `fecha_pago`.
+- ✅ Desactivar arrendatario impide registrar nuevos meses pero conserva su historial.
+- ✅ Los pagos de parqueo **no** aparecen en el flujo de caja principal (Fase 5) — solo en su reporte propio.
 
 ---
 
@@ -2315,12 +2726,14 @@ class ReporteService
 php artisan make:livewire pages::dashboard
 php artisan make:livewire pages::reportes.flujo-caja
 php artisan make:livewire pages::reportes.ocupacion
+php artisan make:livewire pages::reportes.parqueo
 
 # Componentes reusables
 php artisan make:livewire reportes.cards-resumen
 php artisan make:livewire reportes.tabla-flujo
 php artisan make:livewire reportes.grafico-flujo
 php artisan make:livewire reportes.barra-ocupacion
+php artisan make:livewire reportes.tabla-parqueo
 ```
 
 ### `pages::dashboard`
@@ -2388,6 +2801,28 @@ Después en el componente Livewire:
 - Tabla mensual con totales generales.
 - Botón "Exportar CSV" (opcional).
 - Solo admin: `middleware: rol:administrador`.
+- **No incluye ingresos de parqueo externo** (esos van en su reporte propio).
+
+### `pages::reportes.parqueo`
+
+Reporte simple e independiente del flujo de caja principal. Es un ingreso "extra".
+
+- Selectores: rango de meses (default año actual), filtro por estado (pagado/pendiente/todos).
+- Tabla agrupada por mes:
+  - Mes
+  - Cantidad de espacios rentados
+  - Total cobrado (suma de `monto` donde `pagado=true`)
+  - Total pendiente (suma de `monto` donde `pagado=false`)
+- Conteo de vehículos esperados en parqueo (combinando inquilinos con vehículo y arrendatarios externos activos):
+  ```php
+  $inquilinosConVehiculo = Inquilino::whereNotNull('vehiculo_tipo')
+      ->whereHas('estanciaActiva')
+      ->count();
+  $arrendatariosActivos = ArrendatarioParqueo::activos()->count();
+  $totalVehiculos = $inquilinosConVehiculo + $arrendatariosActivos;
+  ```
+- Botón "Exportar CSV" (opcional).
+- Solo admin: `middleware: rol:administrador`.
 
 ## Rutas
 
@@ -2401,6 +2836,8 @@ Route::middleware('auth')->group(function () {
             ->name('reportes.flujo');
         Route::get('/reportes/ocupacion', App\Livewire\Pages\Reportes\Ocupacion::class)
             ->name('reportes.ocupacion');
+        Route::get('/reportes/parqueo', App\Livewire\Pages\Reportes\Parqueo::class)
+            ->name('reportes.parqueo');
     });
 });
 ```
@@ -2414,6 +2851,8 @@ Route::middleware('auth')->group(function () {
 - ✅ Devengado vs caja coinciden cuando no hay anticipos; difieren cuando los hay.
 - ✅ Reportes financieros restringidos a admin.
 - ✅ La carpeta `storage/app/recibos/` no existe (no es necesaria).
+- ✅ Reporte de parqueo muestra ingresos por mes separado del flujo de caja principal.
+- ✅ Conteo de vehículos suma inquilinos con vehículo + arrendatarios externos activos.
 
 ## Notas técnicas Fase 5
 

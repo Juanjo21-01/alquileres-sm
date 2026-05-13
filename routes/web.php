@@ -14,6 +14,18 @@ Route::middleware(['auth'])->group(function () {
     // Cuartos por propiedad (route model binding: {propiedad} → Propiedad)
     Route::livewire('/propiedades/{propiedad}/cuartos', 'pages::cuartos.tablero')
         ->name('cuartos.tablero');
+
+    // Inquilinos
+    Route::livewire('/inquilinos', 'pages::inquilinos.index')
+        ->name('inquilinos.index');
+    Route::livewire('/inquilinos/{inquilino}', 'pages::inquilinos.detalle')
+        ->name('inquilinos.detalle');
+
+    // Estancias
+    Route::livewire('/estancias', 'pages::estancias.index')
+        ->name('estancias.index');
+    Route::livewire('/estancias/{estancia}', 'pages::estancias.detalle')
+        ->name('estancias.detalle');
 });
 
 require __DIR__.'/settings.php';

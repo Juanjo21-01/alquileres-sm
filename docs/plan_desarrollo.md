@@ -1071,13 +1071,13 @@ Schema::create('inquilinos', function (Blueprint $table) {
     $table->id();
     $table->string('nombres', 100);
     $table->string('apellidos', 100);
-    $table->string('dpi', 20)->nullable()->unique();
-    $table->string('telefono', 20)->nullable();
+    $table->string('dpi', 13)->nullable()->unique();
+    $table->string('telefono', 8)->nullable();
     $table->string('email', 150)->nullable();
     $table->enum('ocupacion', ['estudiante', 'salud', 'otro'])->default('otro');
     $table->string('institucion', 150)->nullable();
     $table->string('contacto_emergencia_nombre', 150)->nullable();
-    $table->string('contacto_emergencia_telefono', 20)->nullable();
+    $table->string('contacto_emergencia_telefono', 8)->nullable();
     $table->text('notas')->nullable();
     $table->timestamps();
     $table->softDeletes();
@@ -1376,12 +1376,12 @@ protected function rules(): array
         'nombres'   => 'required|string|max:100',
         'apellidos' => 'required|string|max:100',
         'dpi'       => [
-            'nullable', 'string', 'max:20',
+            'nullable', 'string', 'max:13',
             Rule::unique('inquilinos','dpi')
                 ->ignore($this->inquilinoId)
                 ->whereNull('deleted_at'),
         ],
-        'telefono'  => 'nullable|string|max:20',
+        'telefono'  => 'nullable|string|max:8',
         'email'     => 'nullable|email|max:150',
         'ocupacion' => 'required|in:estudiante,salud,otro',
         'institucion' => 'nullable|string|max:150',

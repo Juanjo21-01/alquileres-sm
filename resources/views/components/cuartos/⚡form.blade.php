@@ -18,6 +18,8 @@ new class extends Component {
     public string $descripcion = '';
     public bool $activo = true;
 
+    public bool $tieneEstanciaActiva = false;
+
     protected function rules(): array
     {
         return [
@@ -43,19 +45,21 @@ new class extends Component {
         $this->resetValidation();
         $this->estado = Cuarto::ESTADO_DISPONIBLE;
         $this->nivel = 1;
+        $this->tieneEstanciaActiva = false;
 
         if ($id) {
             $c = Cuarto::findOrFail($id);
             $this->authorize('update', $c);
-            $this->cuartoId    = $c->id;
-            $this->propiedadId = $c->propiedad_id;
-            $this->codigo      = $c->codigo;
-            $this->nivel       = $c->nivel;
-            $this->tamano      = $c->tamano ?? '';
-            $this->precio_base = (string) $c->precio_base;
-            $this->estado      = $c->estado;
-            $this->descripcion = $c->descripcion ?? '';
-            $this->activo      = $c->activo;
+            $this->cuartoId            = $c->id;
+            $this->propiedadId         = $c->propiedad_id;
+            $this->codigo              = $c->codigo;
+            $this->nivel               = $c->nivel;
+            $this->tamano              = $c->tamano ?? '';
+            $this->precio_base         = (string) $c->precio_base;
+            $this->estado              = $c->estado;
+            $this->descripcion         = $c->descripcion ?? '';
+            $this->activo              = $c->activo;
+            $this->tieneEstanciaActiva = $c->estanciaActiva()->exists();
         } else {
             $this->authorize('create', Cuarto::class);
             $this->propiedadId = $propiedadId;
@@ -75,6 +79,13 @@ new class extends Component {
         if ($this->cuartoId) {
             $c = Cuarto::findOrFail($this->cuartoId);
             $this->authorize('update', $c);
+
+            if ($this->tieneEstanciaActiva && $this->estado !== Cuarto::ESTADO_OCUPADO) {
+                $this->addError('estado', 'El cuarto tiene una estancia activa, no se puede cambiar el estado.');
+
+                return;
+            }
+
             $c->update($datos + ['propiedad_id' => $this->propiedadId]);
             $mensaje = 'Cuarto actualizado correctamente.';
         } else {
@@ -135,11 +146,17 @@ new class extends Component {
         </div>
 
         @if ($cuartoId)
-            <flux:select wire:model="estado" label="Estado">
-                @foreach (Cuarto::estados() as $valor => $etiqueta)
-                    <flux:select.option value="{{ $valor }}">{{ $etiqueta }}</flux:select.option>
-                @endforeach
-            </flux:select>
+            <div>
+                <flux:select wire:model="estado" label="Estado" :disabled="$tieneEstanciaActiva">
+                    @foreach (Cuarto::estados() as $valor => $etiqueta)
+                        <flux:select.option value="{{ $valor }}">{{ $etiqueta }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+                @if ($tieneEstanciaActiva)
+                    <p class="mt-1 text-xs text-zinc-500">El estado no se puede cambiar mientras el cuarto tenga una estancia activa.</p>
+                @endif
+                @error('estado') <flux:error>{{ $message }}</flux:error> @enderror
+            </div>
         @endif
 
         <flux:textarea wire:model="descripcion" label="Descripción" rows="2" />

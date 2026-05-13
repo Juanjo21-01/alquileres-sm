@@ -23,6 +23,22 @@
                         wire:navigate>
                         Propiedades
                     </flux:sidebar.item>
+
+                    <flux:sidebar.item
+                        icon="users"
+                        :href="route('inquilinos.index')"
+                        :current="request()->routeIs('inquilinos.*')"
+                        wire:navigate>
+                        Inquilinos
+                    </flux:sidebar.item>
+
+                    <flux:sidebar.item
+                        icon="home"
+                        :href="route('estancias.index')"
+                        :current="request()->routeIs('estancias.*')"
+                        wire:navigate>
+                        Estancias
+                    </flux:sidebar.item>
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 

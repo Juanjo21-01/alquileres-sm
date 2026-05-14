@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -21,6 +22,8 @@ class Inquilino extends Model
         'email',
         'ocupacion',
         'institucion',
+        'vehiculo_tipo',
+        'vehiculo_placa',
         'contacto_emergencia_nombre',
         'contacto_emergencia_telefono',
         'notas',
@@ -31,14 +34,28 @@ class Inquilino extends Model
         'activo' => 'boolean',
     ];
 
+    public const VEHICULO_CARRO = 'carro';
+
+    public const VEHICULO_MOTO = 'moto';
+
     public function estancias(): HasMany
     {
         return $this->hasMany(Estancia::class);
     }
 
+    public function pagos(): HasManyThrough
+    {
+        return $this->hasManyThrough(Pago::class, Estancia::class);
+    }
+
     public function estanciaActiva(): HasOne
     {
         return $this->hasOne(Estancia::class)->where('estado', Estancia::ESTADO_ACTIVA);
+    }
+
+    public function tieneVehiculo(): bool
+    {
+        return ! is_null($this->vehiculo_tipo);
     }
 
     public function getNombreCompletoAttribute(): string

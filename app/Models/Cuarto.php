@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['propiedad_id', 'codigo', 'nivel', 'tamano', 'precio_base', 'estado', 'descripcion', 'activo'])]
@@ -44,6 +45,11 @@ class Cuarto extends Model
     public function propiedad(): BelongsTo
     {
         return $this->belongsTo(Propiedad::class);
+    }
+
+    public function estancias(): HasMany
+    {
+        return $this->hasMany(Estancia::class);
     }
 
     public function estanciaActiva(): HasOne

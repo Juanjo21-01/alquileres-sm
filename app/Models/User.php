@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -40,6 +41,21 @@ class User extends Authenticatable
     public function rol(): BelongsTo
     {
         return $this->belongsTo(Rol::class, 'rol_id');
+    }
+
+    public function estanciasRegistradas(): HasMany
+    {
+        return $this->hasMany(Estancia::class, 'user_registro_id');
+    }
+
+    public function pagosRegistrados(): HasMany
+    {
+        return $this->hasMany(Pago::class, 'user_registro_id');
+    }
+
+    public function alquileresParqueoRegistrados(): HasMany
+    {
+        return $this->hasMany(AlquilerParqueo::class, 'user_registro_id');
     }
 
     public function tieneRol(string $codigo): bool

@@ -20,6 +20,8 @@ return new class extends Migration
             $table->string('email', 150)->nullable();
             $table->enum('ocupacion', ['estudiante', 'salud', 'otro'])->default('otro');
             $table->string('institucion', 150)->nullable();
+            $table->enum('vehiculo_tipo', ['carro', 'moto'])->nullable();
+            $table->string('vehiculo_placa', 20)->nullable();
             $table->string('contacto_emergencia_nombre', 150)->nullable();
             $table->string('contacto_emergencia_telefono', 8)->nullable();
             $table->text('notas')->nullable();
@@ -29,6 +31,7 @@ return new class extends Migration
 
             $table->index(['nombres', 'apellidos']);
             $table->index('telefono');
+            $table->index('vehiculo_placa');
         });
     }
 

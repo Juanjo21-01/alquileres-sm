@@ -32,6 +32,10 @@ new class extends Component
 
     public bool $activo = true;
 
+    public string $vehiculoTipo = '';
+
+    public string $vehiculoPlaca = '';
+
     public array $instituciones = [];
 
     protected function rules(): array
@@ -53,6 +57,8 @@ new class extends Component
             'contacto_emergencia_telefono' => 'nullable|string|max:8',
             'notas' => 'nullable|string',
             'activo' => 'boolean',
+            'vehiculoTipo' => 'nullable|in:carro,moto',
+            'vehiculoPlaca' => 'nullable|string|max:20',
         ];
     }
 
@@ -79,6 +85,8 @@ new class extends Component
             $this->contacto_emergencia_telefono = $i->contacto_emergencia_telefono ?? '';
             $this->notas = $i->notas ?? '';
             $this->activo = $i->activo;
+            $this->vehiculoTipo = $i->vehiculo_tipo ?? '';
+            $this->vehiculoPlaca = $i->vehiculo_placa ?? '';
         } else {
             $this->authorize('create', Inquilino::class);
         }
@@ -90,9 +98,13 @@ new class extends Component
     {
         $datos = $this->validate();
 
-        foreach (['dpi', 'telefono', 'email', 'institucion', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono', 'notas'] as $campo) {
+        foreach (['dpi', 'telefono', 'email', 'institucion', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono', 'notas', 'vehiculoTipo', 'vehiculoPlaca'] as $campo) {
             $datos[$campo] = $datos[$campo] ?: null;
         }
+
+        $datos['vehiculo_tipo']  = $datos['vehiculoTipo'];
+        $datos['vehiculo_placa'] = $datos['vehiculoPlaca'];
+        unset($datos['vehiculoTipo'], $datos['vehiculoPlaca']);
 
         if ($this->inquilinoId) {
             $i = Inquilino::findOrFail($this->inquilinoId);
@@ -172,6 +184,22 @@ new class extends Component
         </div>
 
         <flux:textarea wire:model="notas" label="Notas" rows="2" />
+
+        <flux:separator text="Vehículo (opcional)" />
+
+        <div class="grid grid-cols-2 gap-3">
+            <flux:select wire:model="vehiculoTipo" label="Tipo de vehículo">
+                <flux:select.option value="">Sin vehículo</flux:select.option>
+                <flux:select.option value="carro">Carro</flux:select.option>
+                <flux:select.option value="moto">Moto</flux:select.option>
+            </flux:select>
+
+            <flux:input
+                wire:model="vehiculoPlaca"
+                label="Placa"
+                placeholder="Ej. P-123ABC"
+                :disabled="$vehiculoTipo" />
+        </div>
 
         @if ($inquilinoId)
             <div>

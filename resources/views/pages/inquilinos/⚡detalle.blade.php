@@ -122,6 +122,33 @@ new #[Title('Detalle inquilino')] class extends Component
                     </dl>
                 </flux:card>
             @endif
+            <flux:card>
+                <flux:heading size="sm" class="mb-3">Parqueo</flux:heading>
+
+                @if ($inquilino->vehiculo_tipo)
+                    <div class="flex items-center gap-2 mb-3">
+                        <flux:icon.check-circle class="text-green-500 size-5" />
+                        <span class="text-sm font-medium text-green-700 dark:text-green-400">
+                            Tiene vehículo registrado
+                        </span>
+                    </div>
+                    <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                        <div>
+                            <dt class="text-zinc-500">Tipo</dt>
+                            <dd class="font-medium capitalize">{{ $inquilino->vehiculo_tipo }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-zinc-500">Placa</dt>
+                            <dd class="font-medium font-mono">{{ $inquilino->vehiculo_placa ?: '—' }}</dd>
+                        </div>
+                    </dl>
+                @else
+                    <div class="flex items-center gap-2">
+                        <flux:icon.x-circle class="text-zinc-400 size-5" />
+                        <span class="text-sm text-zinc-500">No posee vehículo registrado</span>
+                    </div>
+                @endif
+            </flux:card>
         </div>
 
         {{-- Estancia activa --}}

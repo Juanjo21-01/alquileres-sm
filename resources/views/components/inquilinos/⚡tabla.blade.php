@@ -42,7 +42,8 @@ new class extends Component
                 $q->where('nombres', 'like', "%{$this->busqueda}%")
                     ->orWhere('apellidos', 'like', "%{$this->busqueda}%")
                     ->orWhere('dpi', 'like', "%{$this->busqueda}%")
-                    ->orWhere('telefono', 'like', "%{$this->busqueda}%");
+                    ->orWhere('telefono', 'like', "%{$this->busqueda}%")
+                    ->orWhere('vehiculo_placa', 'like', "%{$this->busqueda}%");
             }))
             ->orderBy('apellidos')
             ->orderBy('nombres');

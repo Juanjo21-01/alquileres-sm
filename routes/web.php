@@ -26,6 +26,20 @@ Route::middleware(['auth'])->group(function () {
         ->name('estancias.index');
     Route::livewire('/estancias/{estancia}', 'pages::estancias.detalle')
         ->name('estancias.detalle');
+
+    // Pagos
+    Route::livewire('/pagos', 'pages::pagos.index')
+        ->name('pagos.index');
+    Route::livewire('/pagos/registrar', 'pages::pagos.registrar')
+        ->name('pagos.registrar');
+    Route::livewire('/pagos/{id}', 'pages::pagos.detalle')
+        ->name('pagos.detalle');
+
+    // Parqueo
+    Route::livewire('/parqueo', 'pages::parqueo.index')
+        ->name('parqueo.index');
+    Route::livewire('/parqueo/{id}', 'pages::parqueo.detalle')
+        ->name('parqueo.detalle');
 });
 
 require __DIR__.'/settings.php';

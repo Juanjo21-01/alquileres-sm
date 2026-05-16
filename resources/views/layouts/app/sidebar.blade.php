@@ -40,6 +40,24 @@
                         Estancias
                     </flux:sidebar.item>
                 </flux:sidebar.group>
+
+                <flux:sidebar.group heading="Ingresos" class="grid">
+                    <flux:sidebar.item
+                        icon="banknotes"
+                        :href="route('pagos.index')"
+                        :current="request()->routeIs('pagos.*')"
+                        wire:navigate>
+                        Pagos
+                    </flux:sidebar.item>
+
+                    <flux:sidebar.item
+                        icon="truck"
+                        :href="route('parqueo.index')"
+                        :current="request()->routeIs('parqueo.*')"
+                        wire:navigate>
+                        Parqueo
+                    </flux:sidebar.item>
+                </flux:sidebar.group>
             </flux:sidebar.nav>
 
             <flux:spacer />

@@ -215,7 +215,12 @@ new #[Title('Detalle de estancia')] class extends Component
         </div>
     </div>
 
+    {{-- Historial de pagos --}}
+    <livewire:pagos.historial-estancia :estancia-id="$estancia->id" />
+
     <livewire:estancias.form-editar />
     <livewire:estancias.form-cerrar />
     <livewire:estancias.modal-cancelar />
+    <livewire:pagos.form />
+    <livewire:pagos.modal-eliminar />
 </div>

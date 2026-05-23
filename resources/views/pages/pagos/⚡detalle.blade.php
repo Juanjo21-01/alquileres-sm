@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Pago;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -16,6 +17,12 @@ new #[Title('Detalle de pago')] class extends Component {
             'estancia.cuarto.propiedad',
             'userRegistro',
         ]);
+    }
+
+    #[On('pago-eliminado')]
+    public function redirigirTrasEliminar(): void
+    {
+        $this->redirect(route('pagos.index'), navigate: true);
     }
 
     public function confirmarEliminar(): void

@@ -129,6 +129,13 @@ new class extends Component
         $this->dispatch('inquilino-guardado');
     }
 
+    public function updatedVehiculoTipo(): void
+    {
+        if (! $this->vehiculoTipo) {
+            $this->vehiculoPlaca = '';
+        }
+    }
+
     public function cancelar(): void
     {
         Flux::modal('form-inquilino')->close();
@@ -188,7 +195,7 @@ new class extends Component
         <flux:separator text="Vehículo (opcional)" />
 
         <div class="grid grid-cols-2 gap-3">
-            <flux:select wire:model="vehiculoTipo" label="Tipo de vehículo">
+            <flux:select wire:model.live="vehiculoTipo" label="Tipo de vehículo">
                 <flux:select.option value="">Sin vehículo</flux:select.option>
                 <flux:select.option value="carro">Carro</flux:select.option>
                 <flux:select.option value="moto">Moto</flux:select.option>
@@ -198,7 +205,7 @@ new class extends Component
                 wire:model="vehiculoPlaca"
                 label="Placa"
                 placeholder="Ej. P-123ABC"
-                :disabled="$vehiculoTipo" />
+                :disabled="! $vehiculoTipo" />
         </div>
 
         @if ($inquilinoId)

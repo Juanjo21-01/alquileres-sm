@@ -39,13 +39,19 @@ class AlquilerParqueoService
         });
     }
 
-    public function marcarPagado(AlquilerParqueo $alquiler, string $metodoPago, ?string $fechaPago = null): void
+    public function marcarPagado(AlquilerParqueo $alquiler, string $metodoPago, ?string $fechaPago = null, ?string $notas = null): void
     {
-        $alquiler->update([
+        $payload = [
             'pagado' => true,
             'fecha_pago' => $fechaPago ?? now()->toDateString(),
             'metodo_pago' => $metodoPago,
-        ]);
+        ];
+
+        if ($notas !== null) {
+            $payload['notas'] = $notas;
+        }
+
+        $alquiler->update($payload);
     }
 
     public function marcarPendiente(AlquilerParqueo $alquiler): void

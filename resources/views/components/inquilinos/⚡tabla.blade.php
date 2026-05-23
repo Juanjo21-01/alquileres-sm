@@ -82,7 +82,18 @@ new class extends Component
                         </a>
                     </flux:table.cell>
                     <flux:table.cell>{{ $inquilino->dpi ?: '—' }}</flux:table.cell>
-                    <flux:table.cell>{{ $inquilino->telefono ?: '—' }}</flux:table.cell>
+                    <flux:table.cell>
+                        @if ($inquilino->telefono)
+                            <a href="https://wa.me/502{{ preg_replace('/\D/', '', $inquilino->telefono) }}"
+                               target="_blank"
+                               class="inline-flex items-center gap-1 text-green-600 dark:text-green-400 hover:underline">
+                                {{ $inquilino->telefono }}
+                                <flux:icon.chat-bubble-left-ellipsis class="size-3.5" />
+                            </a>
+                        @else
+                            —
+                        @endif
+                    </flux:table.cell>
                     <flux:table.cell class="capitalize">{{ $inquilino->ocupacion }}</flux:table.cell>
                     <flux:table.cell align="center">
                         @if (!$inquilino->activo)

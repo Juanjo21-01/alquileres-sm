@@ -11,6 +11,7 @@ use Livewire\Component;
 
 new class extends Component {
     public ?int $estanciaId = null;
+    public bool $estanciaFijada = false;
     public ?int $tipoPagoId = null;
     public string $fechaPago = '';
     public string $mesAplicado = '';
@@ -49,6 +50,14 @@ new class extends Component {
     }
 
     #[Computed]
+    public function estanciaFija(): ?Estancia
+    {
+        return $this->estanciaId
+            ? Estancia::with(['inquilino', 'cuarto.propiedad'])->find($this->estanciaId)
+            : null;
+    }
+
+    #[Computed]
     public function montoNeto(): float
     {
         return max(0, round((float) $this->montoBruto - (float) $this->descuento, 2));
@@ -68,12 +77,14 @@ new class extends Component {
         $this->authorize('create', Pago::class);
         $this->reset();
         $this->resetValidation();
-        $this->fechaPago  = now()->toDateString();
-        $this->descuento  = '0';
-        $this->metodoPago = 'efectivo';
+        $this->fechaPago      = now()->toDateString();
+        $this->descuento      = '0';
+        $this->metodoPago     = 'efectivo';
+        $this->estanciaFijada = false;
 
         if ($estanciaId) {
-            $this->estanciaId = $estanciaId;
+            $this->estanciaId     = $estanciaId;
+            $this->estanciaFijada = true;
         }
 
         Flux::modal('form-pago')->show();
@@ -156,15 +167,30 @@ new class extends Component {
         </div>
 
         {{-- Estancia --}}
-        <flux:select wire:model.live="estanciaId" label="Estancia activa" required>
-            <flux:select.option value="">Seleccionar estancia...</flux:select.option>
-            @foreach ($estancias as $estancia)
-                <flux:select.option value="{{ $estancia->id }}">
-                    {{ $estancia->inquilino->nombre_completo }} — {{ $estancia->cuarto->codigo }} ({{ $estancia->cuarto->propiedad->nombre }})
-                </flux:select.option>
-            @endforeach
-        </flux:select>
-        @error('estanciaId') <flux:error>{{ $message }}</flux:error> @enderror
+        @if ($estanciaFijada)
+            <div class="rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-4 py-2.5 flex items-center gap-2 text-sm">
+                <flux:icon.home class="size-4 text-zinc-400 shrink-0" />
+                <div>
+                    <span class="text-zinc-500 text-xs uppercase tracking-wide">Estancia</span>
+                    <p class="font-medium text-zinc-800 dark:text-zinc-200">
+                        {{ $this->estanciaFija->inquilino->nombre_completo }}
+                        <span class="text-zinc-400">—</span>
+                        {{ $this->estanciaFija->cuarto->codigo }}
+                        <span class="text-zinc-400 text-xs">({{ $this->estanciaFija->cuarto->propiedad->nombre }})</span>
+                    </p>
+                </div>
+            </div>
+        @else
+            <flux:select wire:model.live="estanciaId" label="Estancia activa" required>
+                <flux:select.option value="">Seleccionar estancia...</flux:select.option>
+                @foreach ($estancias as $estancia)
+                    <flux:select.option value="{{ $estancia->id }}">
+                        {{ $estancia->inquilino->nombre_completo }} — {{ $estancia->cuarto->codigo }} ({{ $estancia->cuarto->propiedad->nombre }})
+                    </flux:select.option>
+                @endforeach
+            </flux:select>
+            @error('estanciaId') <flux:error>{{ $message }}</flux:error> @enderror
+        @endif
 
         <div class="grid grid-cols-2 gap-3">
             {{-- Tipo de pago --}}

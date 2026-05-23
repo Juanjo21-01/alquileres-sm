@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\ArrendatarioParqueo;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -11,6 +12,13 @@ new #[Title('Detalle arrendatario')] class extends Component {
     {
         $this->arrendatario = ArrendatarioParqueo::findOrFail($id);
         $this->authorize('view', $this->arrendatario);
+    }
+
+    #[On('arrendatario-guardado')]
+    #[On('arrendatario-desactivado')]
+    public function refrescarArrendatario(): void
+    {
+        $this->arrendatario = $this->arrendatario->fresh();
     }
 
     public function abrirFormMes(): void
@@ -27,7 +35,8 @@ new #[Title('Detalle arrendatario')] class extends Component {
     {
         $this->authorize('update', $this->arrendatario);
         $this->arrendatario->update(['activo' => true]);
-        $this->arrendatario->refresh();
+        $this->arrendatario = $this->arrendatario->fresh();
+        $this->dispatch('arrendatario-activado');
     }
 }; ?>
 
@@ -103,7 +112,16 @@ new #[Title('Detalle arrendatario')] class extends Component {
                 <div class="px-4 py-3">
                     <p class="text-xs uppercase tracking-wide text-zinc-500 mb-1">Teléfono</p>
                     <p class="text-sm text-zinc-800 dark:text-zinc-200">
-                        {{ $arrendatario->telefono ?: '—' }}
+                        @if ($arrendatario->telefono)
+                            <a href="https://wa.me/502{{ preg_replace('/\D/', '', $arrendatario->telefono) }}"
+                               target="_blank"
+                               class="inline-flex items-center gap-1 text-green-600 dark:text-green-400 hover:underline">
+                                {{ $arrendatario->telefono }}
+                                <flux:icon.chat-bubble-left-ellipsis class="size-3.5" />
+                            </a>
+                        @else
+                            —
+                        @endif
                     </p>
                 </div>
 

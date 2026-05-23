@@ -12,8 +12,14 @@ new class extends Component {
     public string $busqueda = '';
     public string $estadoFiltro = 'activos';
 
-    public function updatingBusqueda(): void { $this->resetPage(); }
-    public function updatingEstadoFiltro(): void { $this->resetPage(); }
+    public function updatingBusqueda(): void
+    {
+        $this->resetPage();
+    }
+    public function updatingEstadoFiltro(): void
+    {
+        $this->resetPage();
+    }
 
     #[On('arrendatario-guardado')]
     #[On('arrendatario-desactivado')]
@@ -46,12 +52,14 @@ new class extends Component {
     {
         $arrendatarios = ArrendatarioParqueo::query()
             ->withMax('alquileres', 'mes')
-            ->when($this->busqueda, fn ($q) => $q->where(function ($q) {
-                $q->where('nombre_completo', 'like', "%{$this->busqueda}%")
-                    ->orWhere('placa', 'like', "%{$this->busqueda}%");
-            }))
-            ->when($this->estadoFiltro === 'activos', fn ($q) => $q->where('activo', true))
-            ->when($this->estadoFiltro === 'inactivos', fn ($q) => $q->where('activo', false))
+            ->when(
+                $this->busqueda,
+                fn($q) => $q->where(function ($q) {
+                    $q->where('nombre_completo', 'like', "%{$this->busqueda}%")->orWhere('placa', 'like', "%{$this->busqueda}%");
+                }),
+            )
+            ->when($this->estadoFiltro === 'activos', fn($q) => $q->where('activo', true))
+            ->when($this->estadoFiltro === 'inactivos', fn($q) => $q->where('activo', false))
             ->orderBy('nombre_completo')
             ->paginate(20);
 
@@ -61,11 +69,8 @@ new class extends Component {
 
 <div>
     <div class="flex flex-col md:flex-row gap-3 mb-4">
-        <flux:input
-            wire:model.live.debounce.300ms="busqueda"
-            icon="magnifying-glass"
-            placeholder="Buscar por nombre o placa..."
-            class="flex-1" />
+        <flux:input wire:model.live.debounce.300ms="busqueda" icon="magnifying-glass"
+            placeholder="Buscar por nombre o placa..." class="flex-1" />
 
         <flux:select wire:model.live="estadoFiltro" class="w-40">
             <flux:select.option value="todos">Todos</flux:select.option>
@@ -89,23 +94,29 @@ new class extends Component {
             @forelse ($arrendatarios as $arrendatario)
                 <flux:table.row :key="$arrendatario->id">
                     <flux:table.cell class="font-medium">
-                        <flux:button
-                            href="{{ route('parqueo.detalle', $arrendatario) }}"
-                            variant="ghost"
-                            size="sm"
+                        <flux:button href="{{ route('parqueo.detalle', $arrendatario) }}" variant="ghost" size="sm"
                             class="!px-0 font-medium">
                             {{ $arrendatario->nombre_completo }}
                         </flux:button>
                     </flux:table.cell>
                     <flux:table.cell class="text-zinc-500">
-                        {{ $arrendatario->telefono ?: '—' }}
+                        @if ($arrendatario->telefono)
+                            <a href="https://wa.me/502{{ preg_replace('/\D/', '', $arrendatario->telefono) }}"
+                                target="_blank"
+                                class="inline-flex items-center gap-1 text-green-600 dark:text-green-400 hover:underline">
+                                {{ $arrendatario->telefono }}
+                                <flux:icon.chat-bubble-left-ellipsis class="size-3.5" />
+                            </a>
+                        @else
+                            —
+                        @endif
                     </flux:table.cell>
                     <flux:table.cell>
                         @php
                             $ocupaciones = [
                                 'estudiante' => ['label' => 'Estudiante', 'color' => 'blue'],
-                                'salud'      => ['label' => 'Salud',      'color' => 'green'],
-                                'otro'       => ['label' => 'Otro',       'color' => 'zinc'],
+                                'salud' => ['label' => 'Salud', 'color' => 'green'],
+                                'otro' => ['label' => 'Otro', 'color' => 'zinc'],
                             ];
                             $oc = $ocupaciones[$arrendatario->ocupacion] ?? $ocupaciones['otro'];
                         @endphp
@@ -116,7 +127,7 @@ new class extends Component {
                     </flux:table.cell>
                     <flux:table.cell class="text-sm text-zinc-500">
                         @if ($arrendatario->alquileres_max_mes)
-                            {{ \Carbon\Carbon::parse($arrendatario->alquileres_max_mes)->format('m/Y') }}
+                            {{ \Carbon\Carbon::parse($arrendatario->alquileres_max_mes)->translatedFormat('F Y') }}
                         @else
                             —
                         @endif
@@ -130,35 +141,21 @@ new class extends Component {
                     </flux:table.cell>
                     <flux:table.cell align="end">
                         <div class="flex items-center justify-end gap-1">
-                            <flux:button
-                                href="{{ route('parqueo.detalle', $arrendatario) }}"
-                                size="xs"
-                                variant="ghost"
-                                icon="eye" />
+                            <flux:button href="{{ route('parqueo.detalle', $arrendatario) }}" size="xs"
+                                variant="ghost" icon="eye" />
 
                             @can('update', $arrendatario)
-                                <flux:button
-                                    wire:click="editar({{ $arrendatario->id }})"
-                                    size="xs"
-                                    variant="ghost"
+                                <flux:button wire:click="editar({{ $arrendatario->id }})" size="xs" variant="ghost"
                                     icon="pencil-square" />
                             @endcan
 
                             @can('update', $arrendatario)
                                 @if ($arrendatario->activo)
-                                    <flux:button
-                                        wire:click="confirmarDesactivar({{ $arrendatario->id }})"
-                                        size="xs"
-                                        variant="ghost"
-                                        icon="pause-circle"
-                                        title="Desactivar" />
+                                    <flux:button wire:click="confirmarDesactivar({{ $arrendatario->id }})" size="xs"
+                                        variant="ghost" icon="pause-circle" title="Desactivar" />
                                 @else
-                                    <flux:button
-                                        wire:click="activar({{ $arrendatario->id }})"
-                                        size="xs"
-                                        variant="ghost"
-                                        icon="play-circle"
-                                        title="Activar" />
+                                    <flux:button wire:click="activar({{ $arrendatario->id }})" size="xs"
+                                        variant="ghost" icon="play-circle" title="Activar" />
                                 @endif
                             @endcan
                         </div>

@@ -5,8 +5,7 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Title('Detalle inquilino')] class extends Component
-{
+new #[Title('Detalle inquilino')] class extends Component {
     public Inquilino $inquilino;
 
     public function mount(Inquilino $inquilino): void
@@ -45,7 +44,9 @@ new #[Title('Detalle inquilino')] class extends Component
     <div class="flex items-start justify-between">
         <div>
             <flux:heading size="xl">{{ $inquilino->nombre_completo }}</flux:heading>
-            <flux:subheading class="capitalize">{{ $inquilino->ocupacion }}{{ $inquilino->institucion ? ' · ' . $inquilino->institucion : '' }}</flux:subheading>
+            <flux:subheading class="capitalize">
+                {{ $inquilino->ocupacion }}{{ $inquilino->institucion ? ' · ' . $inquilino->institucion : '' }}
+            </flux:subheading>
         </div>
 
         <div class="flex items-center gap-2">
@@ -82,7 +83,18 @@ new #[Title('Detalle inquilino')] class extends Component
                     </div>
                     <div>
                         <dt class="text-zinc-500">Teléfono</dt>
-                        <dd class="font-medium">{{ $inquilino->telefono ?: '—' }}</dd>
+                        <dd class="font-medium">
+                            @if ($inquilino->telefono)
+                                <a href="https://wa.me/502{{ preg_replace('/\D/', '', $inquilino->telefono) }}"
+                                    target="_blank"
+                                    class="inline-flex items-center gap-1 text-green-600 dark:text-green-400 hover:underline">
+                                    {{ $inquilino->telefono }}
+                                    <flux:icon.chat-bubble-left-ellipsis class="size-3.5" />
+                                </a>
+                            @else
+                                —
+                            @endif
+                        </dd>
                     </div>
                     <div>
                         <dt class="text-zinc-500">Correo</dt>
@@ -117,7 +129,18 @@ new #[Title('Detalle inquilino')] class extends Component
                         </div>
                         <div>
                             <dt class="text-zinc-500">Teléfono</dt>
-                            <dd class="font-medium">{{ $inquilino->contacto_emergencia_telefono ?: '—' }}</dd>
+                            <dd class="font-medium">
+                                @if ($inquilino->contacto_emergencia_telefono)
+                                    <a href="https://wa.me/502{{ preg_replace('/\D/', '', $inquilino->contacto_emergencia_telefono) }}"
+                                       target="_blank"
+                                       class="inline-flex items-center gap-1 text-green-600 dark:text-green-400 hover:underline">
+                                        {{ $inquilino->contacto_emergencia_telefono }}
+                                        <flux:icon.chat-bubble-left-ellipsis class="size-3.5" />
+                                    </a>
+                                @else
+                                    —
+                                @endif
+                            </dd>
                         </div>
                     </dl>
                 </flux:card>
@@ -161,7 +184,8 @@ new #[Title('Detalle inquilino')] class extends Component
                     <div class="space-y-2 text-sm">
                         <div>
                             <span class="text-zinc-500">Cuarto</span>
-                            <p class="font-medium">{{ $ea->cuarto->propiedad->nombre }} — {{ $ea->cuarto->codigo }}</p>
+                            <p class="font-medium">{{ $ea->cuarto->propiedad->nombre }} — {{ $ea->cuarto->codigo }}
+                            </p>
                         </div>
                         <div>
                             <span class="text-zinc-500">Desde</span>
@@ -173,10 +197,7 @@ new #[Title('Detalle inquilino')] class extends Component
                         </div>
                         <flux:badge color="green">Activa</flux:badge>
                         <div class="pt-2">
-                            <flux:button
-                                href="{{ route('estancias.detalle', $ea) }}"
-                                size="sm"
-                                variant="ghost"
+                            <flux:button href="{{ route('estancias.detalle', $ea) }}" size="sm" variant="ghost"
                                 class="w-full">
                                 Ver detalle de estancia
                             </flux:button>
@@ -214,7 +235,8 @@ new #[Title('Detalle inquilino')] class extends Component
                             </flux:table.cell>
                             <flux:table.cell>{{ $estancia->fecha_inicio->format('d/m/Y') }}</flux:table.cell>
                             <flux:table.cell>{{ $estancia->fecha_fin?->format('d/m/Y') ?? '—' }}</flux:table.cell>
-                            <flux:table.cell>Q {{ number_format((float) $estancia->precio_acordado, 2) }}</flux:table.cell>
+                            <flux:table.cell>Q {{ number_format((float) $estancia->precio_acordado, 2) }}
+                            </flux:table.cell>
                             <flux:table.cell align="center">
                                 @if ($estancia->estado === 'activa')
                                     <flux:badge color="green" size="sm">Activa</flux:badge>
@@ -225,9 +247,7 @@ new #[Title('Detalle inquilino')] class extends Component
                                 @endif
                             </flux:table.cell>
                             <flux:table.cell align="end">
-                                <flux:button
-                                    href="{{ route('estancias.detalle', $estancia) }}"
-                                    size="xs"
+                                <flux:button href="{{ route('estancias.detalle', $estancia) }}" size="xs"
                                     variant="ghost">
                                     Ver
                                 </flux:button>

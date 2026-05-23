@@ -11,6 +11,8 @@ new class extends Component {
     public ?string $mesInfo = null;
     public string $metodoPago = 'efectivo';
     public string $fechaPago = '';
+    public string $notas = '';
+    public bool $tieneNotas = false;
 
     protected function rules(): array
     {
@@ -34,11 +36,13 @@ new class extends Component {
         $alquiler = AlquilerParqueo::findOrFail($id);
         $this->authorize('update', $alquiler);
 
-        $this->alquilerId = $alquiler->id;
-        $this->mesInfo    = \Carbon\Carbon::parse($alquiler->mes)->translatedFormat('F Y')
+        $this->alquilerId  = $alquiler->id;
+        $this->mesInfo     = \Carbon\Carbon::parse($alquiler->mes)->translatedFormat('F Y')
             . ' — Q ' . number_format((float) $alquiler->monto, 2);
-        $this->metodoPago = 'efectivo';
-        $this->fechaPago  = now()->toDateString();
+        $this->metodoPago  = 'efectivo';
+        $this->fechaPago   = now()->toDateString();
+        $this->tieneNotas  = $alquiler->notas !== null;
+        $this->notas       = '';
 
         Flux::modal('marcar-pagado')->show();
     }
@@ -50,9 +54,14 @@ new class extends Component {
         $alquiler = AlquilerParqueo::findOrFail($this->alquilerId);
         $this->authorize('update', $alquiler);
 
-        $service->marcarPagado($alquiler, $this->metodoPago, $this->fechaPago);
+        $service->marcarPagado(
+            $alquiler,
+            $this->metodoPago,
+            $this->fechaPago,
+            $this->notas ?: null,
+        );
 
-        $this->reset(['alquilerId', 'mesInfo', 'metodoPago', 'fechaPago']);
+        $this->reset(['alquilerId', 'mesInfo', 'metodoPago', 'fechaPago', 'notas', 'tieneNotas']);
         Flux::modal('marcar-pagado')->close();
         Flux::toast(text: 'Mes marcado como pagado.', variant: 'success');
         $this->dispatch('mes-pagado');
@@ -84,6 +93,14 @@ new class extends Component {
                 @error('fechaPago') <flux:error>{{ $message }}</flux:error> @enderror
             </div>
         </div>
+
+        @if (! $tieneNotas)
+            <flux:textarea
+                wire:model="notas"
+                label="Notas (opcional)"
+                rows="2"
+                placeholder="Observaciones del pago..." />
+        @endif
 
         <div class="flex gap-2 justify-end">
             <flux:modal.close>

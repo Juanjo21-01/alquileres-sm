@@ -145,7 +145,15 @@ new #[Title('Registrar pago')] class extends Component {
         </div>
     </div>
 
-    <div class="max-w-2xl">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+
+        {{-- Resumen estancia --}}
+        <div class="lg:col-span-2">
+            <livewire:pagos.resumen-estancia :estancia-id="$estanciaId" />
+        </div>
+
+        {{-- Formulario --}}
+        <div class="lg:col-span-3">
         <flux:card>
             <form wire:submit="guardar" class="space-y-5">
 
@@ -256,5 +264,7 @@ new #[Title('Registrar pago')] class extends Component {
 
             </form>
         </flux:card>
+        </div>
+
     </div>
 </div>

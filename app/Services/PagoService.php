@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Estancia;
 use App\Models\Pago;
 use App\Models\TipoPago;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -18,6 +19,17 @@ class PagoService
 
             if ($tipoPago->requiere_mes && empty($datos['mes_aplicado'])) {
                 throw new RuntimeException("El tipo de pago '{$tipoPago->nombre}' requiere mes aplicado.");
+            }
+
+            if ($tipoPago->requiere_mes && ! empty($datos['mes_aplicado'])) {
+                $mesAplicado = Carbon::parse($datos['mes_aplicado'])->startOfMonth();
+                $mesInicio = $estancia->fecha_inicio->copy()->startOfMonth();
+
+                if ($mesAplicado->lt($mesInicio)) {
+                    throw new RuntimeException(
+                        "El mes aplicado no puede ser anterior al inicio de la estancia ({$mesInicio->translatedFormat('F Y')})."
+                    );
+                }
             }
 
             $bruto = round((float) $datos['monto_bruto'], 2);

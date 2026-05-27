@@ -25,7 +25,12 @@ new class extends Component {
 
         $ultimoPago = Pago::where('estancia_id', $estancia->id)->with('tipoPago')->latest('fecha_pago')->first();
 
-        return compact('estancia', 'totalMensual', 'ultimoPago');
+        $primerMesPagado = Pago::where('estancia_id', $estancia->id)
+            ->whereHas('tipoPago', fn ($q) => $q->where('codigo', 'mensualidad'))
+            ->where('mes_aplicado', $estancia->fecha_inicio->startOfMonth()->toDateString())
+            ->exists();
+
+        return compact('estancia', 'totalMensual', 'ultimoPago', 'primerMesPagado');
     }
 }; ?>
 
@@ -109,10 +114,18 @@ new class extends Component {
                         <span>Total mensual</span>
                         <span class="text-green-700 dark:text-green-400">Q {{ number_format($totalMensual, 2) }}</span>
                     </div>
-                    <div class="flex justify-between text-zinc-500">
-                        <span>Depósito</span>
-                        <span>Q {{ number_format((float) $estancia->deposito, 2) }}</span>
-                    </div>
+                    @if ((float) $estancia->anticipo > 0 && ! $primerMesPagado)
+                        <div class="flex justify-between text-zinc-500">
+                            <span>Anticipo pagado</span>
+                            <span>− Q {{ number_format((float) $estancia->anticipo, 2) }}</span>
+                        </div>
+                        <div
+                            class="flex justify-between items-center rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 px-3 py-2 mt-1">
+                            <span class="text-amber-700 dark:text-amber-400 text-xs font-medium">Primer mes a cobrar</span>
+                            <span
+                                class="font-bold text-amber-700 dark:text-amber-400">Q {{ number_format($totalMensual - (float) $estancia->anticipo, 2) }}</span>
+                        </div>
+                    @endif
                     @if ($estancia->extras->where('periodicidad', 'unica')->isNotEmpty())
                         <div class="pt-1 border-t border-zinc-100 dark:border-zinc-700">
                             <p class="text-xs text-zinc-400 mb-1">Extras únicos</p>

@@ -20,7 +20,7 @@ new class extends Component
 
     public string $precioAcordado = '';
 
-    public string $deposito = '0';
+    public string $anticipo = '0';
 
     public string $notas = '';
 
@@ -34,7 +34,7 @@ new class extends Component
             'fechaInicio' => 'required|date',
             'fechaFinEstimada' => 'nullable|date|after_or_equal:fechaInicio',
             'precioAcordado' => 'required|numeric|min:0',
-            'deposito' => 'nullable|numeric|min:0',
+            'anticipo' => 'nullable|numeric|min:0',
             'notas' => 'nullable|string',
             'extras' => 'array',
             'extras.*.descripcion' => 'required|string|max:150',
@@ -59,7 +59,7 @@ new class extends Component
         $this->authorize('create', Estancia::class);
         $this->reset();
         $this->resetValidation();
-        $this->deposito = '0';
+        $this->anticipo = '0';
         $this->fechaInicio = now()->toDateString();
 
         if ($inquilinoId) {
@@ -82,7 +82,7 @@ new class extends Component
                     'fecha_inicio' => $this->fechaInicio,
                     'fecha_fin_estimada' => $this->fechaFinEstimada ?: null,
                     'precio_acordado' => $this->precioAcordado,
-                    'deposito' => $this->deposito ?: 0,
+                    'anticipo' => $this->anticipo ?: 0,
                     'notas' => $this->notas ?: null,
                 ],
                 extras: $this->extras,
@@ -170,7 +170,7 @@ new class extends Component
 
         <div class="grid grid-cols-2 gap-3">
             <flux:input wire:model="precioAcordado" label="Precio acordado (Q)" type="number" min="0" step="0.01" required />
-            <flux:input wire:model="deposito" label="Depósito (Q)" type="number" min="0" step="0.01" />
+            <flux:input wire:model="anticipo" label="Anticipo (Q)" type="number" min="0" step="0.01" />
         </div>
 
         <flux:textarea wire:model="notas" label="Notas" rows="2" />

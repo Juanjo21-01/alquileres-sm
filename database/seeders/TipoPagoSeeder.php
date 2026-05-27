@@ -13,7 +13,6 @@ class TipoPagoSeeder extends Seeder
             ['codigo' => 'anticipo',    'nombre' => 'Anticipo',    'requiere_mes' => false],
             ['codigo' => 'mensualidad', 'nombre' => 'Mensualidad', 'requiere_mes' => true],
             ['codigo' => 'extra',       'nombre' => 'Extra',       'requiere_mes' => false],
-            ['codigo' => 'deposito',    'nombre' => 'Depósito',    'requiere_mes' => false],
         ];
 
         foreach ($tipos as $t) {

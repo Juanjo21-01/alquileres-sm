@@ -13,7 +13,7 @@ new class extends Component
 
     public string $precioAcordado = '';
 
-    public string $deposito = '0';
+    public string $anticipo = '0';
 
     public string $notas = '';
 
@@ -22,7 +22,7 @@ new class extends Component
         return [
             'fechaFinEstimada' => 'nullable|date',
             'precioAcordado' => 'required|numeric|min:0',
-            'deposito' => 'nullable|numeric|min:0',
+            'anticipo' => 'nullable|numeric|min:0',
             'notas' => 'nullable|string',
         ];
     }
@@ -48,7 +48,7 @@ new class extends Component
         $this->estanciaId = $e->id;
         $this->fechaFinEstimada = $e->fecha_fin_estimada?->toDateString() ?? '';
         $this->precioAcordado = (string) $e->precio_acordado;
-        $this->deposito = (string) $e->deposito;
+        $this->anticipo = (string) $e->anticipo;
         $this->notas = $e->notas ?? '';
         $this->resetValidation();
 
@@ -71,7 +71,7 @@ new class extends Component
         $e->update([
             'fecha_fin_estimada' => $datos['fechaFinEstimada'] ?: null,
             'precio_acordado' => $datos['precioAcordado'],
-            'deposito' => $datos['deposito'] ?: 0,
+            'anticipo' => $datos['anticipo'] ?: 0,
             'notas' => $datos['notas'] ?: null,
         ]);
 
@@ -102,8 +102,8 @@ new class extends Component
                 step="0.01"
                 required />
             <flux:input
-                wire:model="deposito"
-                label="Depósito (Q)"
+                wire:model="anticipo"
+                label="Anticipo (Q)"
                 type="number"
                 min="0"
                 step="0.01" />

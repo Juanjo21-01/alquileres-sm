@@ -133,8 +133,8 @@ new #[Title('Detalle de estancia')] class extends Component
                         <dd class="font-medium">Q {{ number_format((float) $estancia->precio_acordado, 2) }}</dd>
                     </div>
                     <div>
-                        <dt class="text-zinc-500">Depósito</dt>
-                        <dd class="font-medium">Q {{ number_format((float) $estancia->deposito, 2) }}</dd>
+                        <dt class="text-zinc-500">Anticipo</dt>
+                        <dd class="font-medium">Q {{ number_format((float) $estancia->anticipo, 2) }}</dd>
                     </div>
                     @if ($estancia->fecha_fin)
                         <div>
@@ -192,8 +192,8 @@ new #[Title('Detalle de estancia')] class extends Component
                         ) }}</dd>
                     </div>
                     <div class="flex justify-between text-zinc-500 pt-1">
-                        <dt>Depósito</dt>
-                        <dd>Q {{ number_format((float) $estancia->deposito, 2) }}</dd>
+                        <dt>Anticipo</dt>
+                        <dd>Q {{ number_format((float) $estancia->anticipo, 2) }}</dd>
                     </div>
                 </dl>
             </flux:card>

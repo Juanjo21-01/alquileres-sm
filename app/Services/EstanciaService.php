@@ -24,7 +24,7 @@ class EstanciaService
                 'fecha_inicio' => $datos['fecha_inicio'],
                 'fecha_fin_estimada' => $datos['fecha_fin_estimada'] ?? null,
                 'precio_acordado' => $datos['precio_acordado'],
-                'deposito' => $datos['deposito'] ?? 0,
+                'anticipo' => $datos['anticipo'] ?? 0,
                 'estado' => Estancia::ESTADO_ACTIVA,
                 'notas' => $datos['notas'] ?? null,
                 'user_registro_id' => $userId,

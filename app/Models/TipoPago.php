@@ -22,8 +22,6 @@ class TipoPago extends Model
 
     public const COD_EXTRA = 'extra';
 
-    public const COD_DEPOSITO = 'deposito';
-
     public function pagos(): HasMany
     {
         return $this->hasMany(Pago::class);

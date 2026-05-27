@@ -11,7 +11,18 @@ new #[Title('Detalle de pago')] class extends Component {
     public function mount(Pago $pago): void
     {
         $this->authorize('view', $pago);
-        $this->pago = $pago->load([
+        $this->pago = $pago;
+        $this->cargarRelaciones();
+    }
+
+    public function rendering(): void
+    {
+        $this->cargarRelaciones();
+    }
+
+    protected function cargarRelaciones(): void
+    {
+        $this->pago->loadMissing([
             'tipoPago',
             'estancia.inquilino',
             'estancia.cuarto.propiedad',
@@ -45,9 +56,9 @@ new #[Title('Detalle de pago')] class extends Component {
         <div>
             <flux:heading size="xl">Pago {{ $pago->recibo_numero ?? "#{$pago->id}" }}</flux:heading>
             <flux:subheading>
-                {{ $pago->estancia->inquilino->nombre_completo }} —
-                {{ $pago->estancia->cuarto->codigo }},
-                {{ $pago->estancia->cuarto->propiedad->nombre }}
+                {{ $pago->estancia?->inquilino?->nombre_completo }} —
+                {{ $pago->estancia?->cuarto?->codigo }},
+                {{ $pago->estancia?->cuarto?->propiedad?->nombre }}
             </flux:subheading>
         </div>
 
@@ -204,12 +215,12 @@ new #[Title('Detalle de pago')] class extends Component {
                 <div class="border-t border-dashed border-zinc-200 pt-3 space-y-1">
                     <p class="text-xs text-zinc-400 uppercase tracking-wide mb-1">Recibido de</p>
                     <p class="font-semibold text-base">
-                        {{ $pago->estancia->inquilino->nombre_completo }}
+                        {{ $pago->estancia?->inquilino?->nombre_completo }}
                     </p>
-                    @if ($pago->estancia->inquilino->dpi)
+                    @if ($pago->estancia?->inquilino?->dpi)
                         <p class="text-xs text-zinc-500">DPI: {{ $pago->estancia->inquilino->dpi }}</p>
                     @endif
-                    @if ($pago->estancia->inquilino->telefono)
+                    @if ($pago->estancia?->inquilino?->telefono)
                         <p class="text-xs text-zinc-500">Tel: {{ $pago->estancia->inquilino->telefono }}</p>
                     @endif
                 </div>
@@ -223,8 +234,8 @@ new #[Title('Detalle de pago')] class extends Component {
                         </p>
                     @endif
                     <p class="text-xs text-zinc-500">
-                        Cuarto {{ $pago->estancia->cuarto->codigo }} —
-                        {{ $pago->estancia->cuarto->propiedad->nombre }}
+                        Cuarto {{ $pago->estancia?->cuarto?->codigo }} —
+                        {{ $pago->estancia?->cuarto?->propiedad?->nombre }}
                     </p>
                 </div>
 

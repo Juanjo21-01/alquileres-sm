@@ -30,6 +30,17 @@ class PagoService
                         "El mes aplicado no puede ser anterior al inicio de la estancia ({$mesInicio->translatedFormat('F Y')})."
                     );
                 }
+
+                $yaExiste = Pago::where('estancia_id', $estancia->id)
+                    ->where('tipo_pago_id', $tipoPago->id)
+                    ->where('mes_aplicado', $mesAplicado->toDateString())
+                    ->exists();
+
+                if ($yaExiste) {
+                    throw new RuntimeException(
+                        "Ya existe un pago de {$tipoPago->nombre} para {$mesAplicado->translatedFormat('F Y')} en esta estancia."
+                    );
+                }
             }
 
             $bruto = round((float) $datos['monto_bruto'], 2);

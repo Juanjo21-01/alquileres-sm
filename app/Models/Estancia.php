@@ -20,7 +20,7 @@ class Estancia extends Model
         'fecha_fin',
         'fecha_fin_estimada',
         'precio_acordado',
-        'deposito',
+        'anticipo',
         'estado',
         'motivo_cierre',
         'notas',
@@ -32,7 +32,7 @@ class Estancia extends Model
         'fecha_fin' => 'date',
         'fecha_fin_estimada' => 'date',
         'precio_acordado' => 'decimal:2',
-        'deposito' => 'decimal:2',
+        'anticipo' => 'decimal:2',
     ];
 
     public const ESTADO_ACTIVA = 'activa';

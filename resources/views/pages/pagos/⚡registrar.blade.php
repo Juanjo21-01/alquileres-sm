@@ -4,6 +4,8 @@ use App\Models\Estancia;
 use App\Models\Pago;
 use App\Models\TipoPago;
 use App\Services\PagoService;
+use Carbon\Carbon;
+use Flux\Flux;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -29,27 +31,27 @@ new #[Title('Registrar pago')] class extends Component {
     protected function rules(): array
     {
         return [
-            'estanciaId'      => 'required|exists:estancias,id',
-            'tipoPagoId'      => 'required|exists:tipos_pago,id',
-            'fechaPago'       => 'required|date',
-            'mesAplicado'     => 'nullable|date',
-            'montoBruto'      => 'required|numeric|min:0.01',
-            'descuento'       => 'nullable|numeric|min:0',
+            'estanciaId' => 'required|exists:estancias,id',
+            'tipoPagoId' => 'required|exists:tipos_pago,id',
+            'fechaPago' => 'required|date',
+            'mesAplicado' => 'nullable|date',
+            'montoBruto' => 'required|numeric|min:0.01',
+            'descuento' => 'nullable|numeric|min:0',
             'motivoDescuento' => 'nullable|string|max:255',
-            'metodoPago'      => 'required|in:efectivo,cuenta',
-            'referencia'      => 'nullable|string|max:100',
-            'notas'           => 'nullable|string',
+            'metodoPago' => 'required|in:efectivo,cuenta',
+            'referencia' => 'nullable|string|max:100',
+            'notas' => 'nullable|string',
         ];
     }
 
     protected function validationAttributes(): array
     {
         return [
-            'estanciaId'  => 'estancia',
-            'tipoPagoId'  => 'tipo de pago',
-            'fechaPago'   => 'fecha de pago',
+            'estanciaId' => 'estancia',
+            'tipoPagoId' => 'tipo de pago',
+            'fechaPago' => 'fecha de pago',
             'mesAplicado' => 'mes aplicado',
-            'montoBruto'  => 'monto bruto',
+            'montoBruto' => 'monto bruto',
         ];
     }
 
@@ -62,14 +64,12 @@ new #[Title('Registrar pago')] class extends Component {
     #[Computed]
     public function tipoRequiereMes(): bool
     {
-        return $this->tipoPagoId
-            ? (bool) TipoPago::find($this->tipoPagoId)?->requiere_mes
-            : false;
+        return $this->tipoPagoId ? (bool) TipoPago::find($this->tipoPagoId)?->requiere_mes : false;
     }
 
     public function updatedTipoPagoId(): void
     {
-        if (! $this->tipoRequiereMes) {
+        if (!$this->tipoRequiereMes) {
             $this->mesAplicado = '';
         }
     }
@@ -81,11 +81,88 @@ new #[Title('Registrar pago')] class extends Component {
         }
     }
 
+    public function updatedEstanciaId(): void
+    {
+        $this->mesAplicado = '';
+    }
+
     public function updatedMetodoPago(): void
     {
         if ($this->metodoPago !== 'cuenta') {
             $this->referencia = '';
         }
+    }
+
+    #[Computed]
+    public function mesesDisponibles(): array
+    {
+        if (! $this->estanciaId) {
+            return [];
+        }
+
+        $estancia = Estancia::find($this->estanciaId);
+        if (! $estancia) {
+            return [];
+        }
+
+        $inicio = $estancia->fecha_inicio->copy()->startOfMonth();
+        $hoy = now()->startOfMonth();
+
+        $fin = $estancia->fecha_fin_estimada
+            ? $estancia->fecha_fin_estimada->copy()->startOfMonth()
+            : $hoy->copy()->addMonth();
+
+        $mesesPagados = Pago::where('estancia_id', $estancia->id)
+            ->whereHas('tipoPago', fn ($q) => $q->where('codigo', TipoPago::COD_MENSUALIDAD))
+            ->pluck('mes_aplicado')
+            ->map(fn ($m) => Carbon::parse($m)->startOfMonth()->toDateString())
+            ->all();
+
+        $meses = [];
+        $cursor = $inicio->copy();
+
+        while ($cursor->lte($fin)) {
+            $valor = $cursor->toDateString();
+            $pagado = in_array($valor, $mesesPagados);
+            $esFuturo = $cursor->gt($hoy);
+
+            $meses[] = [
+                'valor'    => $valor,
+                'etiqueta' => ucfirst($cursor->translatedFormat('F Y')),
+                'pagado'   => $pagado,
+                'esFuturo' => $esFuturo,
+            ];
+
+            $cursor = $cursor->addMonth();
+        }
+
+        return $meses;
+    }
+
+    public function seleccionarMes(string $mes): void
+    {
+        if (! $this->estanciaId) {
+            return;
+        }
+
+        $mesCarbon = Carbon::parse($mes)->startOfMonth();
+
+        if ($mesCarbon->gt(now()->startOfMonth())) {
+            return;
+        }
+
+        $existe = Pago::where('estancia_id', $this->estanciaId)
+            ->whereHas('tipoPago', fn ($q) => $q->where('codigo', TipoPago::COD_MENSUALIDAD))
+            ->where('mes_aplicado', $mesCarbon->toDateString())
+            ->exists();
+
+        if ($existe) {
+            Flux::toast(text: 'Este mes ya fue pagado.', variant: 'warning');
+
+            return;
+        }
+
+        $this->mesAplicado = $mes;
     }
 
     public function guardar(PagoService $service): void
@@ -96,16 +173,16 @@ new #[Title('Registrar pago')] class extends Component {
         try {
             $service->registrar(
                 datos: [
-                    'estancia_id'      => $this->estanciaId,
-                    'tipo_pago_id'     => $this->tipoPagoId,
-                    'fecha_pago'       => $this->fechaPago,
-                    'mes_aplicado'     => $this->mesAplicado ?: null,
-                    'monto_bruto'      => $this->montoBruto,
-                    'descuento'        => $this->descuento ?: 0,
+                    'estancia_id' => $this->estanciaId,
+                    'tipo_pago_id' => $this->tipoPagoId,
+                    'fecha_pago' => $this->fechaPago,
+                    'mes_aplicado' => $this->mesAplicado ?: null,
+                    'monto_bruto' => $this->montoBruto,
+                    'descuento' => $this->descuento ?: 0,
                     'motivo_descuento' => $this->motivoDescuento ?: null,
-                    'metodo_pago'      => $this->metodoPago,
-                    'referencia'       => $this->referencia ?: null,
-                    'notas'            => $this->notas ?: null,
+                    'metodo_pago' => $this->metodoPago,
+                    'referencia' => $this->referencia ?: null,
+                    'notas' => $this->notas ?: null,
                 ],
                 userId: auth()->id(),
             );
@@ -113,7 +190,7 @@ new #[Title('Registrar pago')] class extends Component {
             session()->flash('toast_success', 'Pago registrado correctamente.');
             $this->redirect(route('pagos.index'), navigate: true);
         } catch (RuntimeException $e) {
-            $this->addError('montoBruto', $e->getMessage());
+            Flux::toast(text: $e->getMessage(), variant: 'danger');
         }
     }
 
@@ -154,116 +231,144 @@ new #[Title('Registrar pago')] class extends Component {
 
         {{-- Formulario --}}
         <div class="lg:col-span-3">
-        <flux:card>
-            <form wire:submit="guardar" class="space-y-5">
+            <flux:card>
+                <form wire:submit="guardar" class="space-y-5">
 
-                {{-- Estancia --}}
-                <flux:select wire:model.live="estanciaId" label="Estancia activa" required>
-                    <flux:select.option value="">Seleccionar estancia...</flux:select.option>
-                    @foreach ($estancias as $estancia)
-                        <flux:select.option value="{{ $estancia->id }}">
-                            {{ $estancia->inquilino->nombre_completo }} —
-                            {{ $estancia->cuarto->codigo }} ({{ $estancia->cuarto->propiedad->nombre }})
-                        </flux:select.option>
-                    @endforeach
-                </flux:select>
-                @error('estanciaId') <flux:error>{{ $message }}</flux:error> @enderror
+                    {{-- Estancia --}}
+                    <flux:select wire:model.live="estanciaId" label="Estancia activa" required>
+                        <flux:select.option value="">Seleccionar estancia...</flux:select.option>
+                        @foreach ($estancias as $estancia)
+                            <flux:select.option value="{{ $estancia->id }}">
+                                {{ $estancia->inquilino->nombre_completo }} —
+                                {{ $estancia->cuarto->codigo }} ({{ $estancia->cuarto->propiedad->nombre }})
+                            </flux:select.option>
+                        @endforeach
+                    </flux:select>
+                    @error('estanciaId')
+                        <flux:error>{{ $message }}</flux:error>
+                    @enderror
 
-                <div class="grid grid-cols-2 gap-4">
-                    {{-- Tipo de pago --}}
-                    <div>
-                        <flux:select wire:model.live="tipoPagoId" label="Tipo de pago" required>
-                            <flux:select.option value="">Seleccionar tipo...</flux:select.option>
-                            @foreach ($tipos as $tipo)
-                                <flux:select.option value="{{ $tipo->id }}">{{ $tipo->nombre }}</flux:select.option>
-                            @endforeach
-                        </flux:select>
-                        @error('tipoPagoId') <flux:error>{{ $message }}</flux:error> @enderror
+                    <div class="grid grid-cols-2 gap-4">
+                        {{-- Tipo de pago --}}
+                        <div>
+                            <flux:select wire:model.live="tipoPagoId" label="Tipo de pago" required>
+                                <flux:select.option value="">Seleccionar tipo...</flux:select.option>
+                                @foreach ($tipos as $tipo)
+                                    <flux:select.option value="{{ $tipo->id }}">{{ $tipo->nombre }}
+                                    </flux:select.option>
+                                @endforeach
+                            </flux:select>
+                            @error('tipoPagoId')
+                                <flux:error>{{ $message }}</flux:error>
+                            @enderror
+                        </div>
+
+                        {{-- Fecha de pago --}}
+                        <flux:input wire:model="fechaPago" type="date" label="Fecha de pago" required />
                     </div>
 
-                    {{-- Fecha de pago --}}
-                    <flux:input wire:model="fechaPago" type="date" label="Fecha de pago" required />
-                </div>
-
-                {{-- Mes aplicado — condicional --}}
-                @if ($this->tipoRequiereMes)
-                    <flux:input
-                        wire:model="mesAplicado"
-                        type="month"
-                        label="Mes aplicado"
-                        required />
-                    @error('mesAplicado') <flux:error>{{ $message }}</flux:error> @enderror
-                @endif
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <flux:input
-                            wire:model.live.debounce.300ms="montoBruto"
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            label="Monto bruto (Q)"
-                            required />
-                        @error('montoBruto') <flux:error>{{ $message }}</flux:error> @enderror
-                    </div>
-
-                    <flux:input
-                        wire:model.live.debounce.300ms="descuento"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        label="Descuento (Q)" />
-                </div>
-
-                {{-- Motivo descuento — condicional --}}
-                @if ((float) $descuento > 0)
-                    <flux:input
-                        wire:model="motivoDescuento"
-                        label="Motivo del descuento"
-                        placeholder="Ej. Pago adelantado, acuerdo especial..."
-                        required />
-                    @error('motivoDescuento') <flux:error>{{ $message }}</flux:error> @enderror
-                @endif
-
-                {{-- Monto neto calculado --}}
-                <div class="rounded-lg bg-zinc-50 dark:bg-zinc-800 px-4 py-3 flex items-center justify-between">
-                    <span class="text-sm text-zinc-600 dark:text-zinc-400">Monto neto a cobrar</span>
-                    <span class="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-                        Q {{ number_format($this->montoNeto, 2) }}
-                    </span>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <flux:select wire:model.live="metodoPago" label="Método de pago" required>
-                            <flux:select.option value="efectivo">Efectivo</flux:select.option>
-                            <flux:select.option value="cuenta">Transferencia / Cuenta</flux:select.option>
-                        </flux:select>
-                    </div>
-
-                    {{-- Referencia — condicional --}}
-                    @if ($metodoPago === 'cuenta')
-                        <flux:input
-                            wire:model="referencia"
-                            label="Referencia / N° transferencia"
-                            placeholder="Ej. TRF-00123..." />
+                    {{-- Mes aplicado — selector de botones --}}
+                    @if ($this->tipoRequiereMes)
+                        <div>
+                            <flux:label>Mes aplicado <span class="text-red-500 ml-0.5">*</span></flux:label>
+                            @if (! $this->estanciaId)
+                                <p class="mt-2 text-sm text-zinc-400">Selecciona una estancia primero.</p>
+                            @elseif (count($this->mesesDisponibles) === 0)
+                                <p class="mt-2 text-sm text-zinc-400">No hay meses disponibles.</p>
+                            @else
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    @foreach ($this->mesesDisponibles as $mes)
+                                        @php $isSelected = $this->mesAplicado === $mes['valor']; @endphp
+                                        <button
+                                            type="button"
+                                            @if (! $mes['esFuturo'])
+                                                wire:click="seleccionarMes('{{ $mes['valor'] }}')"
+                                            @endif
+                                            @disabled($mes['esFuturo'])
+                                            @class([
+                                                'inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors',
+                                                'bg-zinc-800 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-800 dark:border-zinc-100' => $isSelected,
+                                                'opacity-40 cursor-not-allowed bg-zinc-100 dark:bg-zinc-800 text-zinc-400 border-zinc-200 dark:border-zinc-700' => ! $isSelected && $mes['esFuturo'],
+                                                'line-through text-zinc-400 dark:text-zinc-500 bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 cursor-pointer' => ! $isSelected && ! $mes['esFuturo'] && $mes['pagado'],
+                                                'text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer' => ! $isSelected && ! $mes['esFuturo'] && ! $mes['pagado'],
+                                            ])
+                                        >
+                                            {{ $mes['etiqueta'] }}
+                                            @if ($mes['pagado'])
+                                                <flux:icon.check class="size-3" />
+                                            @endif
+                                        </button>
+                                    @endforeach
+                                </div>
+                                @if (! $this->mesAplicado)
+                                    <p class="mt-1.5 text-xs text-zinc-400">Selecciona el mes a pagar.</p>
+                                @endif
+                            @endif
+                            @error('mesAplicado')
+                                <flux:error>{{ $message }}</flux:error>
+                            @enderror
+                        </div>
                     @endif
-                </div>
 
-                <flux:textarea wire:model="notas" label="Notas" rows="2" />
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <flux:input wire:model.live.debounce.300ms="montoBruto" type="number" min="0.01"
+                                step="0.01" label="Monto bruto (Q)" required />
+                            @error('montoBruto')
+                                <flux:error>{{ $message }}</flux:error>
+                            @enderror
+                        </div>
 
-                <div class="flex gap-3 justify-end pt-2">
-                    <flux:button href="{{ route('pagos.index') }}" variant="ghost">
-                        Cancelar
-                    </flux:button>
-                    <flux:button type="submit" variant="primary">
-                        <span wire:loading.remove wire:target="guardar">Registrar pago</span>
-                        <span wire:loading wire:target="guardar">Registrando...</span>
-                    </flux:button>
-                </div>
+                        <flux:input wire:model.live.debounce.300ms="descuento" type="number" min="0"
+                            step="0.01" label="Descuento (Q)" />
+                    </div>
 
-            </form>
-        </flux:card>
+                    {{-- Motivo descuento — condicional --}}
+                    @if ((float) $descuento > 0)
+                        <flux:input wire:model="motivoDescuento" label="Motivo del descuento"
+                            placeholder="Ej. Pago adelantado, acuerdo especial..." required />
+                        @error('motivoDescuento')
+                            <flux:error>{{ $message }}</flux:error>
+                        @enderror
+                    @endif
+
+                    {{-- Monto neto calculado --}}
+                    <div class="rounded-lg bg-zinc-50 dark:bg-zinc-800 px-4 py-3 flex items-center justify-between">
+                        <span class="text-sm text-zinc-600 dark:text-zinc-400">Monto neto a cobrar</span>
+                        <span class="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+                            Q {{ number_format($this->montoNeto, 2) }}
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <flux:select wire:model.live="metodoPago" label="Método de pago" required>
+                                <flux:select.option value="efectivo">Efectivo</flux:select.option>
+                                <flux:select.option value="cuenta">Transferencia / Cuenta</flux:select.option>
+                            </flux:select>
+                        </div>
+
+                        {{-- Referencia — condicional --}}
+                        @if ($metodoPago === 'cuenta')
+                            <flux:input wire:model="referencia" label="Referencia / N° transferencia"
+                                placeholder="Ej. TRF-00123..." />
+                        @endif
+                    </div>
+
+                    <flux:textarea wire:model="notas" label="Notas" rows="2" />
+
+                    <div class="flex gap-3 justify-end pt-2">
+                        <flux:button href="{{ route('pagos.index') }}" variant="ghost">
+                            Cancelar
+                        </flux:button>
+                        <flux:button type="submit" variant="primary">
+                            <span wire:loading.remove wire:target="guardar">Registrar pago</span>
+                            <span wire:loading wire:target="guardar">Registrando...</span>
+                        </flux:button>
+                    </div>
+
+                </form>
+            </flux:card>
         </div>
 
     </div>

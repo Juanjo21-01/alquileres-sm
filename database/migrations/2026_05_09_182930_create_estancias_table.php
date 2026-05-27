@@ -19,7 +19,7 @@ return new class extends Migration
             $table->date('fecha_fin')->nullable();
             $table->date('fecha_fin_estimada')->nullable();
             $table->decimal('precio_acordado', 10, 2);
-            $table->decimal('deposito', 10, 2)->default(0);
+            $table->decimal('anticipo', 10, 2)->default(0);
             $table->enum('estado', ['activa', 'finalizada', 'cancelada'])->default('activa');
             $table->string('motivo_cierre', 255)->nullable();
             $table->text('notas')->nullable();

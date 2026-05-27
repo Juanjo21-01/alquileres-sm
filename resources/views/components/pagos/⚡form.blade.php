@@ -4,6 +4,7 @@ use App\Models\Estancia;
 use App\Models\Pago;
 use App\Models\TipoPago;
 use App\Services\PagoService;
+use Carbon\Carbon;
 use Flux\Flux;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -104,6 +105,11 @@ new class extends Component {
         }
     }
 
+    public function updatedEstanciaId(): void
+    {
+        $this->mesAplicado = '';
+    }
+
     public function updatedMetodoPago(): void
     {
         if ($this->metodoPago !== 'cuenta') {
@@ -111,9 +117,82 @@ new class extends Component {
         }
     }
 
+    #[Computed]
+    public function mesesDisponibles(): array
+    {
+        if (! $this->estanciaId) {
+            return [];
+        }
+
+        $estancia = Estancia::find($this->estanciaId);
+        if (! $estancia) {
+            return [];
+        }
+
+        $inicio = $estancia->fecha_inicio->copy()->startOfMonth();
+        $hoy = now()->startOfMonth();
+
+        $fin = $estancia->fecha_fin_estimada
+            ? $estancia->fecha_fin_estimada->copy()->startOfMonth()
+            : $hoy->copy()->addMonth();
+
+        $mesesPagados = Pago::where('estancia_id', $estancia->id)
+            ->whereHas('tipoPago', fn ($q) => $q->where('codigo', TipoPago::COD_MENSUALIDAD))
+            ->pluck('mes_aplicado')
+            ->map(fn ($m) => Carbon::parse($m)->startOfMonth()->toDateString())
+            ->all();
+
+        $meses = [];
+        $cursor = $inicio->copy();
+
+        while ($cursor->lte($fin)) {
+            $valor = $cursor->toDateString();
+            $pagado = in_array($valor, $mesesPagados);
+            $esFuturo = $cursor->gt($hoy);
+
+            $meses[] = [
+                'valor'    => $valor,
+                'etiqueta' => ucfirst($cursor->translatedFormat('F Y')),
+                'pagado'   => $pagado,
+                'esFuturo' => $esFuturo,
+            ];
+
+            $cursor = $cursor->addMonth();
+        }
+
+        return $meses;
+    }
+
+    public function seleccionarMes(string $mes): void
+    {
+        if (! $this->estanciaId) {
+            return;
+        }
+
+        $mesCarbon = Carbon::parse($mes)->startOfMonth();
+
+        if ($mesCarbon->gt(now()->startOfMonth())) {
+            return;
+        }
+
+        $existe = Pago::where('estancia_id', $this->estanciaId)
+            ->whereHas('tipoPago', fn ($q) => $q->where('codigo', TipoPago::COD_MENSUALIDAD))
+            ->where('mes_aplicado', $mesCarbon->toDateString())
+            ->exists();
+
+        if ($existe) {
+            Flux::toast(text: 'Este mes ya fue pagado.', variant: 'warning');
+
+            return;
+        }
+
+        $this->mesAplicado = $mes;
+    }
+
     public function guardar(PagoService $service): void
     {
         $this->authorize('create', Pago::class);
+        $this->resetValidation();
         $this->validate();
 
         try {
@@ -137,7 +216,7 @@ new class extends Component {
             Flux::toast(text: 'Pago registrado correctamente.', variant: 'success');
             $this->dispatch('pago-registrado');
         } catch (RuntimeException $e) {
-            $this->addError('montoBruto', $e->getMessage());
+            Flux::toast(text: $e->getMessage(), variant: 'danger');
         }
     }
 
@@ -208,14 +287,45 @@ new class extends Component {
             <flux:input wire:model="fechaPago" type="date" label="Fecha de pago" required />
         </div>
 
-        {{-- Mes aplicado — solo si el tipo lo requiere --}}
+        {{-- Mes aplicado — selector de botones --}}
         @if ($this->tipoRequiereMes)
-            <flux:input
-                wire:model="mesAplicado"
-                type="month"
-                label="Mes aplicado"
-                required />
-            @error('mesAplicado') <flux:error>{{ $message }}</flux:error> @enderror
+            <div>
+                <flux:label>Mes aplicado <span class="text-red-500 ml-0.5">*</span></flux:label>
+                @if (! $this->estanciaId)
+                    <p class="mt-2 text-sm text-zinc-400">Selecciona una estancia primero.</p>
+                @elseif (count($this->mesesDisponibles) === 0)
+                    <p class="mt-2 text-sm text-zinc-400">No hay meses disponibles.</p>
+                @else
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        @foreach ($this->mesesDisponibles as $mes)
+                            @php $isSelected = $this->mesAplicado === $mes['valor']; @endphp
+                            <button
+                                type="button"
+                                @if (! $mes['esFuturo'])
+                                    wire:click="seleccionarMes('{{ $mes['valor'] }}')"
+                                @endif
+                                @disabled($mes['esFuturo'])
+                                @class([
+                                    'inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors',
+                                    'bg-zinc-800 dark:bg-zinc-100 text-white dark:text-zinc-900 border-zinc-800 dark:border-zinc-100' => $isSelected,
+                                    'opacity-40 cursor-not-allowed bg-zinc-100 dark:bg-zinc-800 text-zinc-400 border-zinc-200 dark:border-zinc-700' => ! $isSelected && $mes['esFuturo'],
+                                    'line-through text-zinc-400 dark:text-zinc-500 bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 cursor-pointer' => ! $isSelected && ! $mes['esFuturo'] && $mes['pagado'],
+                                    'text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer' => ! $isSelected && ! $mes['esFuturo'] && ! $mes['pagado'],
+                                ])
+                            >
+                                {{ $mes['etiqueta'] }}
+                                @if ($mes['pagado'])
+                                    <flux:icon.check class="size-3" />
+                                @endif
+                            </button>
+                        @endforeach
+                    </div>
+                    @if (! $this->mesAplicado)
+                        <p class="mt-1.5 text-xs text-zinc-400">Selecciona el mes a pagar.</p>
+                    @endif
+                @endif
+                @error('mesAplicado') <flux:error>{{ $message }}</flux:error> @enderror
+            </div>
         @endif
 
         <div class="grid grid-cols-2 gap-3">
@@ -227,7 +337,7 @@ new class extends Component {
                 step="0.01"
                 label="Monto bruto (Q)"
                 required />
-            @error('montoBruto') <flux:error>{{ $message }}</flux:error> @enderror
+            @error('montoBruto') <flux:error  :error>{{ $message }}</flux:error> @enderror
 
             {{-- Descuento --}}
             <flux:input

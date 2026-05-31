@@ -152,7 +152,13 @@ new class extends Component {
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="font-medium">{{ $ultimoPago->tipoPago->nombre }}</p>
-                                <p class="text-zinc-500">{{ $ultimoPago->fecha_pago->format('d/m/Y') }}</p>
+                                <p class="text-zinc-500">
+                                    @if ($ultimoPago->mes_aplicado)
+                                        {{ ucfirst($ultimoPago->mes_aplicado->translatedFormat('F Y')) }}
+                                    @else
+                                        {{ $ultimoPago->fecha_pago->format('d/m/Y') }}
+                                    @endif
+                                </p>
                             </div>
                             <span class="font-semibold text-zinc-800 dark:text-zinc-100">
                                 Q {{ number_format((float) $ultimoPago->monto_neto, 2) }}

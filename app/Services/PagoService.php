@@ -15,6 +15,11 @@ class PagoService
     {
         return DB::transaction(function () use ($datos, $userId) {
             $estancia = Estancia::lockForUpdate()->findOrFail($datos['estancia_id']);
+
+            if ($estancia->estado === Estancia::ESTADO_CANCELADA) {
+                throw new RuntimeException('No se pueden registrar pagos en una estancia cancelada.');
+            }
+
             $tipoPago = TipoPago::findOrFail($datos['tipo_pago_id']);
 
             if ($tipoPago->requiere_mes && empty($datos['mes_aplicado'])) {

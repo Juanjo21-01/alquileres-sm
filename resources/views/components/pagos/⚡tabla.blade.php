@@ -114,7 +114,7 @@ new class extends Component {
                         <flux:badge size="sm" color="blue">{{ $pago->tipoPago->nombre }}</flux:badge>
                     </flux:table.cell>
                     <flux:table.cell class="text-sm text-zinc-500">
-                        {{ $pago->mes_aplicado ? $pago->mes_aplicado->format('m/Y') : '—' }}
+                        {{ ucfirst($pago->mes_aplicado ? $pago->mes_aplicado->translatedFormat('F Y') : '—') }}
                     </flux:table.cell>
                     <flux:table.cell align="end" class="text-sm">
                         Q {{ number_format((float) $pago->monto_bruto, 2) }}

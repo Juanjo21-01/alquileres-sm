@@ -32,7 +32,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('pagos.index');
     Route::livewire('/pagos/registrar', 'pages::pagos.registrar')
         ->name('pagos.registrar');
-    Route::livewire('/pagos/{id}', 'pages::pagos.detalle')
+    Route::livewire('/pagos/{pago}', 'pages::pagos.detalle')
         ->name('pagos.detalle');
 
     // Parqueo

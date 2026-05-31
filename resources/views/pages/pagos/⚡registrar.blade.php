@@ -69,9 +69,13 @@ new #[Title('Registrar pago')] class extends Component {
 
     public function updatedTipoPagoId(): void
     {
-        if (!$this->tipoRequiereMes) {
+        if (! $this->tipoRequiereMes) {
             $this->mesAplicado = '';
         }
+
+        $this->montoBruto      = '';
+        $this->descuento       = '0';
+        $this->motivoDescuento = '';
     }
 
     public function updatedDescuento(): void
@@ -83,7 +87,10 @@ new #[Title('Registrar pago')] class extends Component {
 
     public function updatedEstanciaId(): void
     {
-        $this->mesAplicado = '';
+        $this->mesAplicado     = '';
+        $this->montoBruto      = '';
+        $this->descuento       = '0';
+        $this->motivoDescuento = '';
     }
 
     public function updatedMetodoPago(): void
@@ -108,8 +115,9 @@ new #[Title('Registrar pago')] class extends Component {
         $inicio = $estancia->fecha_inicio->copy()->startOfMonth();
         $hoy = now()->startOfMonth();
 
-        $fin = $estancia->fecha_fin_estimada
-            ? $estancia->fecha_fin_estimada->copy()->startOfMonth()
+        $finReal = $estancia->fecha_fin ?? $estancia->fecha_fin_estimada;
+        $fin = $finReal
+            ? $finReal->copy()->startOfMonth()
             : $hoy->copy()->addMonth();
 
         $mesesPagados = Pago::where('estancia_id', $estancia->id)
@@ -163,6 +171,74 @@ new #[Title('Registrar pago')] class extends Component {
         }
 
         $this->mesAplicado = $mes;
+        $this->autoFillMonto();
+    }
+
+    #[Computed]
+    public function montoSugerido(): float
+    {
+        if (! $this->estanciaId) {
+            return 0.0;
+        }
+
+        $estancia = Estancia::with('extras')->find($this->estanciaId);
+        if (! $estancia) {
+            return 0.0;
+        }
+
+        return (float) $estancia->precio_acordado
+            + $estancia->extras->where('periodicidad', 'mensual')->sum(fn ($e) => (float) $e->monto);
+    }
+
+    protected function autoFillMonto(): void
+    {
+        if (! $this->estanciaId) {
+            return;
+        }
+
+        $estancia = Estancia::with('extras')->find($this->estanciaId);
+        if (! $estancia) {
+            return;
+        }
+
+        $totalMensual = (float) $estancia->precio_acordado
+            + $estancia->extras->where('periodicidad', 'mensual')->sum(fn ($e) => (float) $e->monto);
+
+        $this->montoBruto = (string) $totalMensual;
+
+        if ($this->mesAplicado) {
+            $mesCarbon = Carbon::parse($this->mesAplicado)->startOfMonth();
+            $primerMes = $estancia->fecha_inicio->startOfMonth();
+
+            if ($mesCarbon->eq($primerMes) && (float) $estancia->anticipo > 0) {
+                $this->descuento       = (string) (float) $estancia->anticipo;
+                $this->motivoDescuento = 'Anticipo inicial de la estancia';
+            } else {
+                $this->descuento       = '0';
+                $this->motivoDescuento = '';
+            }
+        }
+    }
+
+    public function restaurarMontoSugerido(): void
+    {
+        $this->autoFillMonto();
+    }
+
+    #[Computed]
+    public function esPrimerMesConAnticipo(): bool
+    {
+        if (! $this->estanciaId || ! $this->mesAplicado) {
+            return false;
+        }
+
+        $estancia = Estancia::find($this->estanciaId);
+        if (! $estancia || (float) $estancia->anticipo <= 0) {
+            return false;
+        }
+
+        return Carbon::parse($this->mesAplicado)->startOfMonth()
+            ->eq($estancia->fecha_inicio->startOfMonth());
     }
 
     public function guardar(PagoService $service): void
@@ -312,15 +388,39 @@ new #[Title('Registrar pago')] class extends Component {
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <flux:input wire:model.live.debounce.300ms="montoBruto" type="number" min="0.01"
-                                step="0.01" label="Monto bruto (Q)" required />
+                            <div class="flex items-center justify-between mb-1">
+                                <flux:label>Monto bruto (Q) <span class="text-red-500 ml-0.5">*</span></flux:label>
+                                @if ($this->tipoRequiereMes && $this->mesAplicado && $this->montoSugerido > 0)
+                                    <button
+                                        type="button"
+                                        wire:click="restaurarMontoSugerido"
+                                        class="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 hover:underline">
+                                        <flux:icon.arrow-path class="size-3" />
+                                        Q {{ number_format($this->montoSugerido, 2) }}
+                                    </button>
+                                @endif
+                            </div>
+                            <flux:input
+                                wire:model.live.debounce.300ms="montoBruto"
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                required />
                             @error('montoBruto')
                                 <flux:error>{{ $message }}</flux:error>
                             @enderror
                         </div>
 
-                        <flux:input wire:model.live.debounce.300ms="descuento" type="number" min="0"
-                            step="0.01" label="Descuento (Q)" />
+                        <div>
+                            <flux:input wire:model.live.debounce.300ms="descuento" type="number" min="0"
+                                step="0.01" label="Descuento (Q)" />
+                            @if ($this->esPrimerMesConAnticipo)
+                                <p class="mt-1 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                    <flux:icon.information-circle class="size-3.5 shrink-0" />
+                                    Anticipo inicial aplicado automáticamente
+                                </p>
+                            @endif
+                        </div>
                     </div>
 
                     {{-- Motivo descuento — condicional --}}

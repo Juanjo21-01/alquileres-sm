@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\Estancia;
 use App\Models\Pago;
+use App\Models\TipoPago;
+use Carbon\Carbon;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -23,6 +26,10 @@ new class extends Component {
 
     public function with(): array
     {
+        $estancia = Estancia::find($this->estanciaId);
+        $estanciaEstado = $estancia?->estado;
+        $puedeRegistrarPago = $this->puedeRegistrarPago($estancia);
+
         $pagos = Pago::with('tipoPago')
             ->where('estancia_id', $this->estanciaId)
             ->orderByDesc('fecha_pago')
@@ -36,7 +43,47 @@ new class extends Component {
             ->sortByDesc(fn ($p) => $p->mes_aplicado?->format('Y-m') ?? '0000-00')
             ->groupBy(fn ($p) => $p->mes_aplicado ? $p->mes_aplicado->format('Y-m') : '');
 
-        return compact('pagos', 'porMes', 'totalNeto');
+        return compact('pagos', 'porMes', 'totalNeto', 'estanciaEstado', 'puedeRegistrarPago');
+    }
+
+    protected function puedeRegistrarPago(?Estancia $estancia): bool
+    {
+        if (! $estancia) {
+            return false;
+        }
+
+        if ($estancia->estado === Estancia::ESTADO_CANCELADA) {
+            return false;
+        }
+
+        if ($estancia->estado === Estancia::ESTADO_ACTIVA) {
+            return true;
+        }
+
+        // Finalizada: mostrar solo si hay meses sin pagar dentro del período
+        $finReal = $estancia->fecha_fin ?? $estancia->fecha_fin_estimada;
+        if (! $finReal) {
+            return false;
+        }
+
+        $inicio = $estancia->fecha_inicio->startOfMonth();
+        $fin = $finReal->startOfMonth();
+
+        $mesesPagados = Pago::where('estancia_id', $estancia->id)
+            ->whereHas('tipoPago', fn ($q) => $q->where('codigo', TipoPago::COD_MENSUALIDAD))
+            ->pluck('mes_aplicado')
+            ->map(fn ($m) => Carbon::parse($m)->startOfMonth()->toDateString())
+            ->all();
+
+        $cursor = $inicio->copy();
+        while ($cursor->lte($fin)) {
+            if (! in_array($cursor->toDateString(), $mesesPagados)) {
+                return true;
+            }
+            $cursor = $cursor->addMonth();
+        }
+
+        return false;
     }
 }; ?>
 
@@ -45,9 +92,11 @@ new class extends Component {
         <flux:heading size="md">Historial de pagos</flux:heading>
 
         @can('create', App\Models\Pago::class)
-            <flux:button wire:click="abrirFormPago" variant="primary" size="sm" icon="plus">
-                Registrar pago
-            </flux:button>
+            @if ($puedeRegistrarPago)
+                <flux:button wire:click="abrirFormPago" variant="primary" size="sm" icon="plus">
+                    Registrar pago
+                </flux:button>
+            @endif
         @endcan
     </div>
 
@@ -62,7 +111,7 @@ new class extends Component {
                 <div class="flex items-center justify-between bg-zinc-50 dark:bg-zinc-800 px-4 py-2">
                     <span class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
                         @if ($claveMes)
-                            {{ \Carbon\Carbon::parse($claveMes . '-01')->translatedFormat('F Y') }}
+                            {{ ucfirst(\Carbon\Carbon::parse($claveMes . '-01')->translatedFormat('F Y')) }}
                         @else
                             Otros pagos
                         @endif

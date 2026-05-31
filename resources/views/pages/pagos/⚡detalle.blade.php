@@ -12,22 +12,6 @@ new #[Title('Detalle de pago')] class extends Component {
     {
         $this->authorize('view', $pago);
         $this->pago = $pago;
-        $this->cargarRelaciones();
-    }
-
-    public function rendering(): void
-    {
-        $this->cargarRelaciones();
-    }
-
-    protected function cargarRelaciones(): void
-    {
-        $this->pago->loadMissing([
-            'tipoPago',
-            'estancia.inquilino',
-            'estancia.cuarto.propiedad',
-            'userRegistro',
-        ]);
     }
 
     #[On('pago-eliminado')]
@@ -39,6 +23,18 @@ new #[Title('Detalle de pago')] class extends Component {
     public function confirmarEliminar(): void
     {
         $this->dispatch('confirmar-eliminar-pago', id: $this->pago->id);
+    }
+
+    public function with(): array
+    {
+        $pago = Pago::with([
+            'tipoPago',
+            'estancia.inquilino',
+            'estancia.cuarto.propiedad',
+            'userRegistro',
+        ])->findOrFail($this->pago->id);
+
+        return compact('pago');
     }
 }; ?>
 
@@ -100,7 +96,7 @@ new #[Title('Detalle de pago')] class extends Component {
                     <div class="col-span-2">
                         <dt class="text-zinc-500">Mes aplicado</dt>
                         <dd class="font-medium">
-                            {{ $pago->mes_aplicado->translatedFormat('F Y') }}
+                            {{ ucfirst($pago->mes_aplicado->translatedFormat('F Y')) }}
                         </dd>
                     </div>
                 @endif
@@ -165,12 +161,16 @@ new #[Title('Detalle de pago')] class extends Component {
                 <div>
                     <dt class="text-zinc-500">Estancia</dt>
                     <dd>
-                        <flux:button
-                            href="{{ route('estancias.detalle', $pago->estancia) }}"
-                            variant="ghost"
-                            size="xs">
-                            Ver estancia #{{ $pago->estancia->id }}
-                        </flux:button>
+                        @if ($pago->estancia)
+                            <flux:button
+                                href="{{ route('estancias.detalle', $pago->estancia) }}"
+                                variant="ghost"
+                                size="xs">
+                                Ver estancia #{{ $pago->estancia->id }}
+                            </flux:button>
+                        @else
+                            <span class="text-zinc-400">—</span>
+                        @endif
                     </dd>
                 </div>
                 <div>
@@ -194,16 +194,15 @@ new #[Title('Detalle de pago')] class extends Component {
             <div class="bg-white text-zinc-900 border border-zinc-200 rounded-xl shadow-md p-6 font-sans text-sm space-y-4 max-w-sm mx-auto">
 
                 {{-- Encabezado del recibo --}}
-                <div class="text-center space-y-0.5 border-b border-zinc-200 pb-4">
-                    <p class="text-xs text-zinc-400 uppercase tracking-widest">Alquileres</p>
-                    <h2 class="text-xl font-bold text-zinc-900">San Marcos</h2>
-                    <p class="text-xs text-zinc-500">San Marcos, Guatemala</p>
+                <div class="text-center border-b border-zinc-200 pb-4">
+                    <img src="{{ asset('fondo.png') }}" alt="Alquileres SM" class="h-20 w-auto mx-auto">
+                    <p class="text-xs text-zinc-500 mt-1">San Marcos, Guatemala</p>
                 </div>
 
                 {{-- N° recibo y fecha --}}
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="text-xs text-zinc-400 uppercase tracking-wide">Recibo N°</p>
+                        <p class="text-xs text-zinc-400 uppercase tracking-wide">Recibo No.</p>
                         <p class="font-bold font-mono text-base">{{ $pago->recibo_numero ?? "#{$pago->id}" }}</p>
                     </div>
                     <div class="text-right">
@@ -230,7 +229,7 @@ new #[Title('Detalle de pago')] class extends Component {
                     <p class="font-medium">{{ $pago->tipoPago->nombre }}</p>
                     @if ($pago->mes_aplicado)
                         <p class="text-xs text-zinc-500">
-                            Mes: {{ $pago->mes_aplicado->translatedFormat('F Y') }}
+                            Mes: {{ ucfirst($pago->mes_aplicado->translatedFormat('F Y')) }}
                         </p>
                     @endif
                     <p class="text-xs text-zinc-500">

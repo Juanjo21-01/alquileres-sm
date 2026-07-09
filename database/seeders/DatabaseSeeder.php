@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             RolSeeder::class,
             UserAdminSeeder::class,
             TipoPagoSeeder::class,
+            CategoriaGastoSeeder::class,
         ]);
     }
 }

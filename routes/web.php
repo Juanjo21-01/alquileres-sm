@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\GastoController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
@@ -40,6 +41,22 @@ Route::middleware(['auth'])->group(function () {
         ->name('parqueo.index');
     Route::livewire('/parqueo/{id}', 'pages::parqueo.detalle')
         ->name('parqueo.detalle');
+
+    // Gastos
+    Route::livewire('/gastos', 'pages::gastos.index')
+        ->name('gastos.index');
+
+    // Categorías de gasto (solo administrador)
+    Route::middleware('rol:administrador')->group(function () {
+        Route::livewire('/categorias-gasto', 'pages::categorias-gasto.index')
+            ->name('categorias.index');
+    });
+
+    // Servir comprobante autenticado — preview (inline) y descarga
+    Route::get('/comprobante/{gasto}/preview', [GastoController::class, 'previewComprobante'])
+        ->name('gastos.comprobante.preview');
+    Route::get('/comprobante/{gasto}/descargar', [GastoController::class, 'descargarComprobante'])
+        ->name('gastos.comprobante.descargar');
 });
 
 require __DIR__.'/settings.php';

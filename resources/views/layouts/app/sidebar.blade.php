@@ -58,6 +58,26 @@
                         Parqueo
                     </flux:sidebar.item>
                 </flux:sidebar.group>
+
+                <flux:sidebar.group heading="Egresos" class="grid">
+                    <flux:sidebar.item
+                        icon="receipt-percent"
+                        :href="route('gastos.index')"
+                        :current="request()->routeIs('gastos.*')"
+                        wire:navigate>
+                        Gastos
+                    </flux:sidebar.item>
+
+                    @if (auth()->user()?->esAdministrador())
+                        <flux:sidebar.item
+                            icon="tag"
+                            :href="route('categorias.index')"
+                            :current="request()->routeIs('categorias.*')"
+                            wire:navigate>
+                            Categorías de gasto
+                        </flux:sidebar.item>
+                    @endif
+                </flux:sidebar.group>
             </flux:sidebar.nav>
 
             <flux:spacer />
@@ -121,6 +141,11 @@
         </flux:header>
 
         {{ $slot }}
+
+        {{-- Visor de comprobantes/PDF reutilizable (escucha 'abrir-visor-pdf') --}}
+        @persist('visor-pdf')
+            <livewire:visor-pdf />
+        @endpersist
 
         @persist('toast')
             <flux:toast.group>

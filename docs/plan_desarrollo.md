@@ -2120,7 +2120,21 @@ Route::middleware('auth')->group(function () {
 
 ---
 
-# Fase 4 — Egresos (gastos)
+# Fase 4 — Egresos (gastos) ✅ COMPLETADA
+
+> **Estado:** Completada (2026-07-08). Bloques 1-7 implementados y verificados; todos los criterios de aceptación se cumplen. **Bloque 8 (tests) pendiente** — omitido por decisión del desarrollador y además bloqueado por un bug pre-existente de Fase 2 (ver nota al final de esta sección).
+>
+> **Extensiones sobre el plan original (aprobadas):**
+> - `categorias_gasto` incluye `requiere_propiedad` y `requiere_cuarto` (bool). El form de gastos aplica validación dinámica: si la categoría los requiere, propiedad/cuarto pasan a obligatorios. `requiere_cuarto` fuerza `requiere_propiedad`.
+> - Se agregó `categorias-gasto.modal-eliminar` (regla 6 CLAUDE.md) con guard "no eliminable si tiene gastos".
+> - Se agregó `gastos.modal-detalle` (ver todos los datos + notas + comprobante). La columna "Comprobante" se quitó de la tabla; el comprobante se ve desde el detalle.
+> - Filtros de fecha en `gastos.tabla` son diferidos, con botones **Buscar** y **Limpiar**.
+> - El visor PDF (`components::visor-pdf`) se construyó genérico con Flux (no se portó de expedientes-codede). Montado 1 vez en `layouts/app/sidebar.blade.php`. Escucha `abrir-visor-pdf` con `url`/`titulo`/`descargaUrl`/`esImagen`.
+> - Sin `GastoService` — el registro es insert de una sola tabla; el form orquesta upload + create.
+>
+> **Nota de storage (Laravel 11+):** el disco `local` apunta a `storage/app/private`. Los comprobantes se guardan en `storage/app/private/comprobantes/` (no `storage/app/comprobantes/`). Carpeta versionada vía `.gitignore` interno; los archivos subidos quedan ignorados por git.
+>
+> **BLOQUEO para tests (pre-existente, Fase 2):** la migración `2026_05_09_182931_add_unique_constraint_to_estancias_activas` usa SQL solo-MySQL (`GENERATED ALWAYS AS ... VIRTUAL, ADD UNIQUE KEY`). La suite corre en SQLite `:memory:` → `migrate:fresh` falla → 32/33 tests existentes fallan. Resolver antes de escribir/correr tests de Fase 4 (envolver el `DB::statement` en `if (DB::getDriverName() === 'mysql')`, o usar MySQL de test).
 
 **Objetivo:** CRUD de categorías de gastos y registro de gastos operativos con asociación opcional a propiedad y/o cuarto.
 

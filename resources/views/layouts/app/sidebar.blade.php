@@ -78,6 +78,42 @@
                         </flux:sidebar.item>
                     @endif
                 </flux:sidebar.group>
+
+                @if (auth()->user()?->esAdministrador())
+                    <flux:sidebar.group heading="Reportes" class="grid">
+                        <flux:sidebar.item
+                            icon="chart-bar"
+                            :href="route('reportes.flujo')"
+                            :current="request()->routeIs('reportes.flujo')"
+                            wire:navigate>
+                            Flujo de caja
+                        </flux:sidebar.item>
+
+                        <flux:sidebar.item
+                            icon="building-office-2"
+                            :href="route('reportes.ocupacion')"
+                            :current="request()->routeIs('reportes.ocupacion')"
+                            wire:navigate>
+                            Ocupación
+                        </flux:sidebar.item>
+
+                        <flux:sidebar.item
+                            icon="truck"
+                            :href="route('reportes.parqueo')"
+                            :current="request()->routeIs('reportes.parqueo')"
+                            wire:navigate>
+                            Parqueo
+                        </flux:sidebar.item>
+
+                        <flux:sidebar.item
+                            icon="users"
+                            :href="route('reportes.inquilinos')"
+                            :current="request()->routeIs('reportes.inquilinos')"
+                            wire:navigate>
+                            Inquilinos
+                        </flux:sidebar.item>
+                    </flux:sidebar.group>
+                @endif
             </flux:sidebar.nav>
 
             <flux:spacer />

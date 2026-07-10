@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Rol;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -25,6 +26,7 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
+            'rol_id' => self::rol(Rol::COD_ADMIN, 'Administrador', 'Acceso total al sistema.'),
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
@@ -34,6 +36,37 @@ class UserFactory extends Factory
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
         ];
+    }
+
+    /**
+     * Resuelve (o crea) el id del rol por su código. Compartido entre usuarios del factory.
+     */
+    protected static function rol(string $codigo, string $nombre, string $descripcion): int
+    {
+        return Rol::firstOrCreate(
+            ['codigo' => $codigo],
+            ['nombre' => $nombre, 'descripcion' => $descripcion, 'activo' => true],
+        )->id;
+    }
+
+    /**
+     * Usuario con rol administrador (acceso total).
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (): array => [
+            'rol_id' => self::rol(Rol::COD_ADMIN, 'Administrador', 'Acceso total al sistema.'),
+        ]);
+    }
+
+    /**
+     * Usuario con rol encargado (operación diaria, sin acceso a reportes).
+     */
+    public function encargado(): static
+    {
+        return $this->state(fn (): array => [
+            'rol_id' => self::rol(Rol::COD_ENCARGADO, 'Encargado', 'Operación diaria.'),
+        ]);
     }
 
     /**

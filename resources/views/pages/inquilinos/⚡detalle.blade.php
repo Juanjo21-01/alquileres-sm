@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\Inquilino;
+use App\Services\ReporteService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -30,6 +32,45 @@ new #[Title('Detalle inquilino')] class extends Component {
     {
         $this->dispatch('abrir-form-estancia', inquilinoId: $this->inquilino->id);
     }
+
+    public function exportarCsv()
+    {
+        $datos = app(ReporteService::class)->historialInquilino($this->inquilino);
+
+        return response()->streamDownload(function () use ($datos) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Cuarto', 'Propiedad', 'Inicio', 'Fin', 'Dias', 'Estado', 'Precio acordado'], escape: '');
+            foreach ($datos['estancias'] as $e) {
+                fputcsv($out, [
+                    $e['cuarto'],
+                    $e['propiedad'],
+                    $e['inicio']?->format('Y-m-d'),
+                    $e['fin']?->format('Y-m-d') ?? 'activa',
+                    $e['dias'],
+                    $e['estado'],
+                    $e['precio'],
+                ], escape: '');
+            }
+            fclose($out);
+        }, "inquilino-{$this->inquilino->id}-historial.csv", ['Content-Type' => 'text/csv']);
+    }
+
+    public function exportarPdf()
+    {
+        $datos = app(ReporteService::class)->historialInquilino($this->inquilino);
+
+        $pdf = Pdf::loadView('pdfs.historial-inquilino', [
+            'inquilino' => $this->inquilino,
+            'estancias' => $datos['estancias'],
+            'stats' => $datos['stats'],
+        ])->setPaper('letter', 'portrait');
+
+        return response()->streamDownload(
+            fn () => print ($pdf->output()),
+            "inquilino-{$this->inquilino->id}-historial.pdf",
+            ['Content-Type' => 'application/pdf'],
+        );
+    }
 }; ?>
 
 <div class="space-y-6">
@@ -53,6 +94,9 @@ new #[Title('Detalle inquilino')] class extends Component {
             @if (!$inquilino->activo)
                 <flux:badge color="red">Inactivo</flux:badge>
             @endif
+
+            <flux:button wire:click="exportarPdf" variant="ghost" size="sm" icon="document-arrow-down">PDF</flux:button>
+            <flux:button wire:click="exportarCsv" variant="ghost" size="sm" icon="table-cells">CSV</flux:button>
 
             @can('update', $inquilino)
                 <flux:button wire:click="editar" variant="ghost" icon="pencil-square">

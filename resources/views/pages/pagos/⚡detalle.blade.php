@@ -59,12 +59,12 @@ new #[Title('Detalle de pago')] class extends Component {
         </div>
 
         <div class="flex items-center gap-2">
-            {{-- PDF: placeholder hasta Fase 5 --}}
-            <flux:tooltip content="Descarga de PDF disponible en próxima versión">
-                <flux:button variant="ghost" icon="arrow-down-tray" disabled>
-                    Descargar PDF
-                </flux:button>
-            </flux:tooltip>
+            <flux:button
+                href="{{ route('recibos.pdf', $pago) }}"
+                variant="ghost"
+                icon="arrow-down-tray">
+                Descargar PDF
+            </flux:button>
 
             @can('delete', $pago)
                 <flux:button wire:click="confirmarEliminar" variant="danger" icon="trash">

@@ -147,6 +147,13 @@ new class extends Component {
                                 variant="ghost"
                                 icon="eye" />
 
+                            <flux:button
+                                href="{{ route('recibos.pdf', $pago) }}"
+                                size="xs"
+                                variant="ghost"
+                                icon="arrow-down-tray"
+                                title="Descargar recibo" />
+
                             @can('delete', $pago)
                                 <flux:button
                                     wire:click="confirmarEliminar({{ $pago->id }})"

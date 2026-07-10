@@ -120,6 +120,14 @@ new class extends Component {
 
                     {{-- Acciones --}}
                     <div class="flex items-center gap-1 pt-1 border-t border-zinc-100 dark:border-zinc-800">
+                        <flux:button
+                            href="{{ route('cuartos.detalle', $cuarto) }}"
+                            size="xs"
+                            variant="ghost"
+                            icon="eye"
+                            title="Ver detalle e historial"
+                            wire:navigate />
+
                         @can('update', $cuarto)
                             <flux:button
                                 wire:click="editar({{ $cuarto->id }})"

@@ -88,7 +88,7 @@ new class extends Component
     }
 }; ?>
 
-<flux:modal name="cancelar-estancia" class="md:w-[500px]">
+<flux:modal name="cancelar-estancia" class="md:w-125">
     <div class="space-y-4">
         <div>
             <flux:heading size="lg">Cancelar estancia</flux:heading>

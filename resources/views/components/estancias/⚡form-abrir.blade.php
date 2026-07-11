@@ -122,7 +122,7 @@ new class extends Component
     }
 }; ?>
 
-<flux:modal name="form-abrir-estancia" class="md:w-[680px]">
+<flux:modal name="form-abrir-estancia" class="md:w-170">
     <form wire:submit="guardar" class="space-y-4">
         <div>
             <flux:heading size="lg">Abrir estancia</flux:heading>

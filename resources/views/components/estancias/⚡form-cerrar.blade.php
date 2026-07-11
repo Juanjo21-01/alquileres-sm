@@ -14,14 +14,22 @@ new class extends Component
 {
     public ?int $estanciaId = null;
 
+    public string $fechaInicio = '';
+
     public string $fechaFin = '';
 
     public string $motivo = '';
 
     protected function rules(): array
     {
+        $reglaFechaFin = ['required', 'date'];
+
+        if ($this->fechaInicio !== '') {
+            $reglaFechaFin[] = 'after_or_equal:'.$this->fechaInicio;
+        }
+
         return [
-            'fechaFin' => 'required|date',
+            'fechaFin' => $reglaFechaFin,
             'motivo' => 'nullable|string|max:255',
         ];
     }
@@ -39,6 +47,7 @@ new class extends Component
         $this->reset();
         $this->resetValidation();
         $this->estanciaId = $estancia->id;
+        $this->fechaInicio = $estancia->fecha_inicio->toDateString();
         $this->fechaFin = now()->toDateString();
 
         Flux::modal('form-cerrar-estancia')->show();

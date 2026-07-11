@@ -9,6 +9,8 @@ new class extends Component
 {
     public ?int $estanciaId = null;
 
+    public string $fechaInicio = '';
+
     public string $fechaFinEstimada = '';
 
     public string $precioAcordado = '';
@@ -19,8 +21,14 @@ new class extends Component
 
     protected function rules(): array
     {
+        $reglaFechaFin = ['nullable', 'date'];
+
+        if ($this->fechaInicio !== '') {
+            $reglaFechaFin[] = 'after_or_equal:'.$this->fechaInicio;
+        }
+
         return [
-            'fechaFinEstimada' => 'nullable|date',
+            'fechaFinEstimada' => $reglaFechaFin,
             'precioAcordado' => 'required|numeric|min:0',
             'anticipo' => 'nullable|numeric|min:0',
             'notas' => 'nullable|string',
@@ -46,6 +54,7 @@ new class extends Component
         }
 
         $this->estanciaId = $e->id;
+        $this->fechaInicio = $e->fecha_inicio->toDateString();
         $this->fechaFinEstimada = $e->fecha_fin_estimada?->toDateString() ?? '';
         $this->precioAcordado = (string) $e->precio_acordado;
         $this->anticipo = (string) $e->anticipo;

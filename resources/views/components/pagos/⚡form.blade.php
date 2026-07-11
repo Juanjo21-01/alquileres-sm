@@ -25,11 +25,18 @@ new class extends Component {
 
     protected function rules(): array
     {
+        $reglaMes = ['nullable', 'date'];
+
+        $estancia = $this->estanciaId ? Estancia::find($this->estanciaId) : null;
+        if ($estancia) {
+            $reglaMes[] = 'after_or_equal:'.$estancia->fecha_inicio->copy()->startOfMonth()->toDateString();
+        }
+
         return [
             'estanciaId'      => 'required|exists:estancias,id',
             'tipoPagoId'      => 'required|exists:tipos_pago,id',
             'fechaPago'       => 'required|date',
-            'mesAplicado'     => 'nullable|date',
+            'mesAplicado'     => $reglaMes,
             'montoBruto'      => 'required|numeric|min:0.01',
             'descuento'       => 'nullable|numeric|min:0',
             'motivoDescuento' => 'nullable|string|max:255',

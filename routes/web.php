@@ -61,6 +61,12 @@ Route::middleware(['auth'])->group(function () {
             ->name('categorias.index');
     });
 
+    // Usuarios del sistema (solo administrador)
+    Route::middleware('rol:administrador')->group(function () {
+        Route::livewire('/usuarios', 'pages::usuarios.index')
+            ->name('usuarios.index');
+    });
+
     // Reportes financieros (solo administrador)
     Route::middleware('rol:administrador')->group(function () {
         Route::livewire('/reportes/flujo-caja', 'pages::reportes.flujo-caja')

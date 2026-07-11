@@ -114,6 +114,18 @@
                         </flux:sidebar.item>
                     </flux:sidebar.group>
                 @endif
+
+                @if (auth()->user()?->esAdministrador())
+                    <flux:sidebar.group heading="Administración" class="grid">
+                        <flux:sidebar.item
+                            icon="user-group"
+                            :href="route('usuarios.index')"
+                            :current="request()->routeIs('usuarios.*')"
+                            wire:navigate>
+                            Usuarios
+                        </flux:sidebar.item>
+                    </flux:sidebar.group>
+                @endif
             </flux:sidebar.nav>
 
             <flux:spacer />

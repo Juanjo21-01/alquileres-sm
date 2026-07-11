@@ -840,7 +840,7 @@ new class extends Component {
     }
 }; ?>
 
-<flux:modal name="form-propiedad" class="md:w-[600px]">
+<flux:modal name="form-propiedad" class="md:w-150">
     <form wire:submit="guardar" class="space-y-4">
         <div>
             <flux:heading size="lg">
@@ -931,7 +931,7 @@ new class extends Component {
     }
 }; ?>
 
-<flux:modal name="eliminar-propiedad" class="md:w-[500px]">
+<flux:modal name="eliminar-propiedad" class="md:w-125">
     <div class="space-y-4">
         <div>
             <flux:heading size="lg">Confirmar eliminación</flux:heading>

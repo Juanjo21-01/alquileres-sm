@@ -76,7 +76,7 @@ new #[Title('Detalle inquilino')] class extends Component {
 <div class="space-y-6">
     {{-- Breadcrumb --}}
     <div class="flex items-center gap-2 text-sm text-zinc-500">
-        <flux:button href="{{ route('inquilinos.index') }}" variant="ghost" size="xs" icon="arrow-left" wire:navigate>
+        <flux:button href="{{ route('inquilinos.index') }}" variant="outline" size="xs" icon="arrow-left" wire:navigate>
             Inquilinos
         </flux:button>
     </div>
@@ -95,11 +95,11 @@ new #[Title('Detalle inquilino')] class extends Component {
                 <flux:badge color="red">Inactivo</flux:badge>
             @endif
 
-            <flux:button wire:click="exportarPdf" variant="ghost" size="sm" icon="document-arrow-down">PDF</flux:button>
-            <flux:button wire:click="exportarCsv" variant="ghost" size="sm" icon="table-cells">CSV</flux:button>
+            <flux:button wire:click="exportarPdf" variant="outline" size="sm" icon="document-arrow-down">PDF</flux:button>
+            <flux:button wire:click="exportarCsv" variant="outline" size="sm" icon="table-cells">CSV</flux:button>
 
             @can('update', $inquilino)
-                <flux:button wire:click="editar" variant="ghost" icon="pencil-square">
+                <flux:button wire:click="editar" variant="outline" icon="pencil-square">
                     Editar
                 </flux:button>
             @endcan
@@ -241,7 +241,7 @@ new #[Title('Detalle inquilino')] class extends Component {
                         </div>
                         <flux:badge color="green">Activa</flux:badge>
                         <div class="pt-2">
-                            <flux:button href="{{ route('estancias.detalle', $ea) }}" size="sm" variant="ghost"
+                            <flux:button href="{{ route('estancias.detalle', $ea) }}" size="sm" variant="outline"
                                 class="w-full">
                                 Ver detalle de estancia
                             </flux:button>
@@ -292,9 +292,7 @@ new #[Title('Detalle inquilino')] class extends Component {
                             </flux:table.cell>
                             <flux:table.cell align="end">
                                 <flux:button href="{{ route('estancias.detalle', $estancia) }}" size="xs"
-                                    variant="ghost">
-                                    Ver
-                                </flux:button>
+                                    variant="outline" icon="eye"/>
                             </flux:table.cell>
                         </flux:table.row>
                     @endforeach

@@ -44,7 +44,7 @@ new #[Title('Detalle arrendatario')] class extends Component {
     {{-- Encabezado --}}
     <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-            <flux:button href="{{ route('parqueo.index') }}" variant="ghost" icon="arrow-left" size="sm" />
+            <flux:button href="{{ route('parqueo.index') }}" variant="outline" icon="arrow-left" size="sm" />
             <div>
                 <flux:heading size="xl">{{ $arrendatario->nombre_completo }}</flux:heading>
                 <flux:subheading>Detalle del arrendatario de parqueo</flux:subheading>
@@ -54,11 +54,11 @@ new #[Title('Detalle arrendatario')] class extends Component {
         <div class="flex items-center gap-2">
             @can('update', $arrendatario)
                 @if ($arrendatario->activo)
-                    <flux:button wire:click="confirmarDesactivar" variant="ghost" icon="no-symbol" size="sm">
+                    <flux:button wire:click="confirmarDesactivar" variant="outline" icon="no-symbol" size="sm">
                         Desactivar
                     </flux:button>
                 @else
-                    <flux:button wire:click="activar" variant="ghost" icon="check-circle" size="sm">
+                    <flux:button wire:click="activar" variant="outline" icon="check-circle" size="sm">
                         Reactivar
                     </flux:button>
                 @endif

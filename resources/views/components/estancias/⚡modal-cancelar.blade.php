@@ -126,7 +126,7 @@ new class extends Component
 
         <div class="flex gap-2 justify-end">
             <flux:modal.close>
-                <flux:button variant="ghost">Cerrar</flux:button>
+                <flux:button variant="outline">Cerrar</flux:button>
             </flux:modal.close>
             <flux:button
                 wire:click="cancelarEstancia"

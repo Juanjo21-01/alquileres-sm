@@ -28,7 +28,7 @@ new class extends Component
 <div class="space-y-3">
     <div class="flex items-center justify-between">
         <flux:heading size="sm">Extras / servicios adicionales</flux:heading>
-        <flux:button type="button" wire:click="agregar" size="sm" variant="ghost" icon="plus">
+        <flux:button type="button" wire:click="agregar" size="sm" variant="outline" icon="plus">
             Agregar extra
         </flux:button>
     </div>
@@ -62,7 +62,7 @@ new class extends Component
                     type="button"
                     wire:click="quitar({{ $i }})"
                     size="sm"
-                    variant="ghost"
+                    variant="outline"
                     icon="trash" />
             </div>
         </div>

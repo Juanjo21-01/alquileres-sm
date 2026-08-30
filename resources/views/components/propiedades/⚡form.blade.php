@@ -80,7 +80,7 @@ new class extends Component {
     }
 }; ?>
 
-<flux:modal name="form-propiedad" class="md:w-[600px]">
+<flux:modal name="form-propiedad" class="md:w-150">
     <form wire:submit="guardar" class="space-y-4">
         <div>
             <flux:heading size="lg">
@@ -112,7 +112,7 @@ new class extends Component {
         <flux:switch wire:model="activo" label="Propiedad activa" />
 
         <div class="flex gap-2 justify-end">
-            <flux:button type="button" wire:click="cancelar" variant="ghost">Cancelar</flux:button>
+            <flux:button type="button" wire:click="cancelar" variant="outline">Cancelar</flux:button>
             <flux:button type="submit" variant="primary">
                 <span wire:loading.remove wire:target="guardar">Guardar</span>
                 <span wire:loading wire:target="guardar">Guardando...</span>

@@ -11,15 +11,13 @@ new #[Title('Propiedades')] class extends Component {
 }; ?>
 
 <div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <flux:heading size="xl">Propiedades</flux:heading>
-
+    <x-ui.page-header title="Propiedades" subtitle="Casas de alquiler registradas.">
         @can('create', App\Models\Propiedad::class)
             <flux:button wire:click="abrirFormNuevo" variant="primary" icon="plus">
                 Nueva propiedad
             </flux:button>
         @endcan
-    </div>
+    </x-ui.page-header>
 
     {{-- Tabla reusable --}}
     <livewire:propiedades.tabla />

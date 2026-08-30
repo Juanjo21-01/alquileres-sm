@@ -55,17 +55,25 @@ new class extends Component {
     }
 }; ?>
 
-<div>
-    <div class="flex flex-col md:flex-row gap-3 mb-4">
-        <flux:input
-            wire:model.live.debounce.300ms="busqueda"
-            icon="magnifying-glass"
-            placeholder="Buscar por nombre o correo..."
-            class="flex-1" />
+<div class="space-y-4">
+    <x-ui.filtros-card>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <flux:input
+                wire:model.live.debounce.300ms="busqueda"
+                icon="magnifying-glass"
+                placeholder="Buscar por nombre o correo..."
+                class="flex-1" />
 
-        <flux:switch wire:model.live="soloActivos" label="Solo activos" />
+            <flux:switch wire:model.live="soloActivos" label="Solo activos" />
+        </div>
+    </x-ui.filtros-card>
+
+    {{-- Skeleton mientras se filtra --}}
+    <div wire:loading.delay wire:target="busqueda, soloActivos">
+        <x-ui.tabla-skeleton :cols="5" />
     </div>
 
+    <div wire:loading.remove.delay wire:target="busqueda, soloActivos">
     <flux:table :paginate="$usuarios">
         <flux:table.columns>
             <flux:table.column>Nombre</flux:table.column>
@@ -99,14 +107,14 @@ new class extends Component {
                                     wire:click="editar({{ $usuario->id }})"
                                     size="xs"
                                     icon="pencil-square"
-                                    variant="ghost" />
+                                    variant="outline" />
 
                                 @unless ($usuario->esAdministrador())
                                     <flux:button
                                         wire:click="confirmarToggle({{ $usuario->id }})"
                                         size="xs"
                                         icon="{{ $usuario->activo ? 'lock-closed' : 'lock-open' }}"
-                                        variant="{{ $usuario->activo ? 'danger' : 'ghost' }}" />
+                                        variant="{{ $usuario->activo ? 'danger' : 'outline' }}" />
                                 @endunless
                             @endcan
                         </div>
@@ -114,11 +122,21 @@ new class extends Component {
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="5" class="text-center text-zinc-500 py-8">
-                        No hay usuarios registrados.
+                    <flux:table.cell colspan="5">
+                        <x-ui.empty-state
+                            icon="user-group"
+                            title="No hay usuarios"
+                            description="Registra operadores para dar acceso al panel.">
+                            @can('create', App\Models\User::class)
+                                <flux:button variant="primary" icon="plus" size="sm" wire:click="$dispatch('abrir-form-usuario')">
+                                    Nuevo usuario
+                                </flux:button>
+                            @endcan
+                        </x-ui.empty-state>
                     </flux:table.cell>
                 </flux:table.row>
             @endforelse
         </flux:table.rows>
     </flux:table>
+    </div>
 </div>

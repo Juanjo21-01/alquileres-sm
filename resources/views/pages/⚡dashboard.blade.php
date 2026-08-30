@@ -25,10 +25,7 @@ new #[Title('Dashboard')] class extends Component {
 }; ?>
 
 <div class="space-y-6">
-    <div>
-        <flux:heading size="xl">Dashboard</flux:heading>
-        <flux:subheading>Resumen del mes y flujo reciente.</flux:subheading>
-    </div>
+    <x-ui.page-header title="Dashboard" subtitle="Resumen del mes y flujo reciente." />
 
     {{-- Cards resumen del mes --}}
     <livewire:reportes.cards-resumen />
@@ -62,7 +59,7 @@ new #[Title('Dashboard')] class extends Component {
         <flux:card class="space-y-3">
             <div class="flex items-center justify-between">
                 <flux:heading size="lg">Últimos pagos</flux:heading>
-                <flux:button href="{{ route('pagos.index') }}" size="xs" variant="ghost" wire:navigate>
+                <flux:button href="{{ route('pagos.index') }}" size="xs" variant="outline" wire:navigate>
                     Ver todos
                 </flux:button>
             </div>
@@ -97,7 +94,7 @@ new #[Title('Dashboard')] class extends Component {
         <flux:card class="space-y-3">
             <div class="flex items-center justify-between">
                 <flux:heading size="lg">Últimos gastos</flux:heading>
-                <flux:button href="{{ route('gastos.index') }}" size="xs" variant="ghost" wire:navigate>
+                <flux:button href="{{ route('gastos.index') }}" size="xs" variant="outline" wire:navigate>
                     Ver todos
                 </flux:button>
             </div>

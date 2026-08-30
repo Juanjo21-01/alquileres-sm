@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         @include('partials.head')
     </head>
@@ -127,22 +127,22 @@
                     </flux:sidebar.group>
                 @endif
             </flux:sidebar.nav>
-
-            <flux:spacer />
-
-            <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
         </flux:sidebar>
 
-        <!-- Mobile User Menu -->
-        <flux:header class="lg:hidden">
+        <!-- Header superior: toggle de tema + menú de usuario (siempre, esquina sup. derecha) -->
+        <flux:header sticky class="border-b border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
             <flux:spacer />
 
-            <flux:dropdown position="top" align="end">
+            <x-theme-toggle />
+
+            <flux:dropdown position="bottom" align="end">
                 <flux:profile
+                    :name="auth()->user()->name"
                     :initials="auth()->user()->initials()"
                     icon-trailing="chevron-down"
+                    class="[&>span]:hidden lg:[&>span]:inline"
                 />
 
                 <flux:menu>

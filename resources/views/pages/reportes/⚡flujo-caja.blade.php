@@ -8,10 +8,7 @@ new #[Title('Flujo de caja')] class extends Component {
 }; ?>
 
 <div class="space-y-6">
-    <div>
-        <flux:heading size="xl">Flujo de caja</flux:heading>
-        <flux:subheading>Ingresos, egresos y ganancia por mes. No incluye parqueo externo.</flux:subheading>
-    </div>
+    <x-ui.page-header title="Flujo de caja" subtitle="Ingresos, egresos y ganancia por mes. No incluye parqueo externo." />
 
     <livewire:reportes.tabla-flujo />
 </div>

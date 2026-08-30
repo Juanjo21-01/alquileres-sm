@@ -321,7 +321,7 @@ new class extends Component {
     }
 }; ?>
 
-<flux:modal name="form-pago" class="md:w-[680px]">
+<flux:modal name="form-pago" class="md:w-170">
     <form wire:submit="guardar" class="space-y-4">
         <div>
             <flux:heading size="lg">Registrar pago</flux:heading>
@@ -491,7 +491,7 @@ new class extends Component {
         <flux:textarea wire:model="notas" label="Notas" rows="2" />
 
         <div class="flex gap-2 justify-end">
-            <flux:button type="button" wire:click="cancelar" variant="ghost">Cancelar</flux:button>
+            <flux:button type="button" wire:click="cancelar" variant="outline">Cancelar</flux:button>
             <flux:button type="submit" variant="primary">
                 <span wire:loading.remove wire:target="guardar">Registrar pago</span>
                 <span wire:loading wire:target="guardar">Registrando...</span>

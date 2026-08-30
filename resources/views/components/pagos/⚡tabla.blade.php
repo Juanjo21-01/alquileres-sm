@@ -9,22 +9,52 @@ use Livewire\WithPagination;
 new class extends Component {
     use WithPagination;
 
+    // Buscador de texto: en vivo.
     public string $busqueda = '';
+
+    // Filtros aplicados (solo cambian con "Buscar").
     public string $tipoId = '';
     public string $metodo = '';
     public string $fechaDesde = '';
     public string $fechaHasta = '';
 
-    public function updatingBusqueda(): void { $this->resetPage(); }
-    public function updatingTipoId(): void { $this->resetPage(); }
-    public function updatingMetodo(): void { $this->resetPage(); }
-    public function updatingFechaDesde(): void { $this->resetPage(); }
-    public function updatingFechaHasta(): void { $this->resetPage(); }
+    // Borradores ligados a los controles; se aplican con "Buscar".
+    public string $fTipo = '';
+    public string $fMetodo = '';
+    public string $fDesde = '';
+    public string $fHasta = '';
+
+    public int $filtrosVersion = 0;
+
+    public function updatingBusqueda(): void
+    {
+        $this->resetPage();
+    }
 
     #[On('pago-registrado')]
     #[On('pago-eliminado')]
     public function refrescar(): void
     {
+        $this->resetPage();
+    }
+
+    public function buscar(): void
+    {
+        $this->tipoId = $this->fTipo;
+        $this->metodo = $this->fMetodo;
+        $this->fechaDesde = $this->fDesde;
+        $this->fechaHasta = $this->fHasta;
+        $this->resetPage();
+    }
+
+    public function limpiar(): void
+    {
+        $this->reset([
+            'busqueda',
+            'tipoId', 'metodo', 'fechaDesde', 'fechaHasta',
+            'fTipo', 'fMetodo', 'fDesde', 'fHasta',
+        ]);
+        $this->filtrosVersion++;
         $this->resetPage();
     }
 
@@ -56,32 +86,51 @@ new class extends Component {
     }
 }; ?>
 
-<div>
-    {{-- Filtros --}}
-    <div class="flex flex-col md:flex-row gap-3 mb-4">
-        <flux:input
-            wire:model.live.debounce.300ms="busqueda"
-            icon="magnifying-glass"
-            placeholder="Buscar por recibo o inquilino..."
-            class="flex-1" />
+<div class="space-y-4">
+    <x-ui.filtros-card>
+        <div wire:key="pagos-filtros-{{ $filtrosVersion }}" class="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
+            <flux:input
+                wire:model.live.debounce.300ms="busqueda"
+                icon="magnifying-glass"
+                placeholder="Buscar por recibo o inquilino..."
+                class="flex-1 min-w-48" />
 
-        <flux:select wire:model.live="tipoId" class="w-48">
-            <flux:select.option value="">Todos los tipos</flux:select.option>
-            @foreach ($tipos as $tipo)
-                <flux:select.option value="{{ $tipo->id }}">{{ $tipo->nombre }}</flux:select.option>
-            @endforeach
-        </flux:select>
+            <flux:select wire:model="fTipo" class="w-full md:w-48">
+                <flux:select.option value="">Todos los tipos</flux:select.option>
+                @foreach ($tipos as $tipo)
+                    <flux:select.option value="{{ $tipo->id }}">{{ $tipo->nombre }}</flux:select.option>
+                @endforeach
+            </flux:select>
 
-        <flux:select wire:model.live="metodo" class="w-44">
-            <flux:select.option value="">Todos los métodos</flux:select.option>
-            <flux:select.option value="efectivo">Efectivo</flux:select.option>
-            <flux:select.option value="cuenta">Cuenta</flux:select.option>
-        </flux:select>
+            <flux:select wire:model="fMetodo" class="w-full md:w-44">
+                <flux:select.option value="">Todos los métodos</flux:select.option>
+                <flux:select.option value="efectivo">Efectivo</flux:select.option>
+                <flux:select.option value="cuenta">Cuenta</flux:select.option>
+            </flux:select>
 
-        <flux:input wire:model.live="fechaDesde" type="date" class="w-40" />
-        <flux:input wire:model.live="fechaHasta" type="date" class="w-40" />
+            <div class="flex flex-col gap-1">
+                <flux:label class="text-xs">Desde</flux:label>
+                <flux:input wire:model="fDesde" type="date" class="w-full md:w-40" />
+            </div>
+
+            <div class="flex flex-col gap-1">
+                <flux:label class="text-xs">Hasta</flux:label>
+                <flux:input wire:model="fHasta" type="date" class="w-full md:w-40" />
+            </div>
+        </div>
+
+        <x-slot:actions>
+            <flux:button wire:click="limpiar" variant="outline" icon="x-mark">Limpiar</flux:button>
+            <flux:button wire:click="buscar" variant="primary" icon="magnifying-glass">Buscar</flux:button>
+        </x-slot:actions>
+    </x-ui.filtros-card>
+
+    {{-- Skeleton mientras se filtra --}}
+    <div wire:loading.delay wire:target="busqueda, buscar, limpiar">
+        <x-ui.tabla-skeleton :cols="11" />
     </div>
 
+    <div wire:loading.remove.delay wire:target="busqueda, buscar, limpiar">
     <flux:table :paginate="$pagos">
         <flux:table.columns>
             <flux:table.column>Fecha</flux:table.column>
@@ -144,13 +193,13 @@ new class extends Component {
                             <flux:button
                                 href="{{ route('pagos.detalle', $pago) }}"
                                 size="xs"
-                                variant="ghost"
+                                variant="outline"
                                 icon="eye" />
 
                             <flux:button
                                 href="{{ route('recibos.pdf', $pago) }}"
                                 size="xs"
-                                variant="ghost"
+                                variant="outline"
                                 icon="arrow-down-tray"
                                 title="Descargar recibo" />
 
@@ -166,11 +215,21 @@ new class extends Component {
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="11" class="text-center text-zinc-500 py-10">
-                        No hay pagos registrados.
+                    <flux:table.cell colspan="11">
+                        <x-ui.empty-state
+                            icon="banknotes"
+                            title="No hay pagos"
+                            description="Registra un pago o ajusta los filtros.">
+                            @can('create', App\Models\Pago::class)
+                                <flux:button href="{{ route('pagos.registrar') }}" size="sm" variant="primary" icon="document-plus" wire:navigate>
+                                    Registrar pago
+                                </flux:button>
+                            @endcan
+                        </x-ui.empty-state>
                     </flux:table.cell>
                 </flux:table.row>
             @endforelse
         </flux:table.rows>
     </flux:table>
+    </div>
 </div>

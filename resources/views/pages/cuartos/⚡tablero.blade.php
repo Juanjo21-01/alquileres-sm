@@ -17,7 +17,7 @@ new #[Title('Tablero de cuartos')] class extends Component {
     <div class="flex items-center justify-between">
         <div>
             <div class="flex items-center gap-2 text-sm text-zinc-500 mb-1">
-                <flux:button href="{{ route('propiedades.index') }}" variant="ghost" size="xs" icon="arrow-left">
+                <flux:button href="{{ route('propiedades.index') }}" variant="outline" size="xs" icon="arrow-left">
                     Propiedades
                 </flux:button>
             </div>

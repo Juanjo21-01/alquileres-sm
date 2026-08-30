@@ -11,18 +11,13 @@ new #[Title('Categorías de gasto')] class extends Component {
 }; ?>
 
 <div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <div>
-            <flux:heading size="xl">Categorías de gasto</flux:heading>
-            <flux:subheading>Catálogo de tipos de egreso del negocio.</flux:subheading>
-        </div>
-
+    <x-ui.page-header title="Categorías de gasto" subtitle="Catálogo de tipos de egreso del negocio.">
         @can('create', App\Models\CategoriaGasto::class)
             <flux:button wire:click="abrirFormNueva" variant="primary" icon="plus">
                 Nueva categoría
             </flux:button>
         @endcan
-    </div>
+    </x-ui.page-header>
 
     {{-- Tabla reusable --}}
     <livewire:categorias-gasto.tabla />

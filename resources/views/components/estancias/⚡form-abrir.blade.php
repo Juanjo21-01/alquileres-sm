@@ -180,7 +180,7 @@ new class extends Component
         <livewire:estancias.repeater-extras wire:model="extras" />
 
         <div class="flex gap-2 justify-end">
-            <flux:button type="button" wire:click="cancelar" variant="ghost">Cancelar</flux:button>
+            <flux:button type="button" wire:click="cancelar" variant="outline">Cancelar</flux:button>
             <flux:button type="submit" variant="primary">
                 <span wire:loading.remove wire:target="guardar">Abrir estancia</span>
                 <span wire:loading wire:target="guardar">Abriendo...</span>

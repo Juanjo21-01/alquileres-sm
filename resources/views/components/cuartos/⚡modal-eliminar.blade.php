@@ -44,7 +44,7 @@ new class extends Component {
     }
 }; ?>
 
-<flux:modal name="eliminar-cuarto" class="md:w-[480px]">
+<flux:modal name="eliminar-cuarto" class="md:w-120">
     <div class="space-y-4">
         <div>
             <flux:heading size="lg">Confirmar eliminación</flux:heading>
@@ -62,7 +62,7 @@ new class extends Component {
 
         <div class="flex gap-2 justify-end">
             <flux:modal.close>
-                <flux:button variant="ghost">Cancelar</flux:button>
+                <flux:button variant="outline">Cancelar</flux:button>
             </flux:modal.close>
 
             @if (!$error)

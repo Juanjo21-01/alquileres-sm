@@ -106,7 +106,7 @@ new class extends Component {
     }
 }; ?>
 
-<flux:modal name="form-mes" class="md:w-[520px]">
+<flux:modal name="form-mes" class="md:w-130">
     <form wire:submit="guardar" class="space-y-4">
         <div>
             <flux:heading size="lg">Registrar mes de parqueo</flux:heading>
@@ -172,7 +172,7 @@ new class extends Component {
             placeholder="Detalles del vehículo, observaciones..." />
 
         <div class="flex gap-2 justify-end">
-            <flux:button type="button" wire:click="cancelar" variant="ghost">Cancelar</flux:button>
+            <flux:button type="button" wire:click="cancelar" variant="outline">Cancelar</flux:button>
             <flux:button type="submit" variant="primary">
                 <span wire:loading.remove wire:target="guardar">Registrar</span>
                 <span wire:loading wire:target="guardar">Registrando...</span>

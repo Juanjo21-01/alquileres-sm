@@ -68,7 +68,7 @@ new class extends Component {
     }
 }; ?>
 
-<flux:modal name="marcar-pagado" class="md:w-[460px]">
+<flux:modal name="marcar-pagado" class="md:w-115">
     <form wire:submit="confirmar" class="space-y-4">
         <div>
             <flux:heading size="lg">Registrar pago de parqueo</flux:heading>
@@ -104,7 +104,7 @@ new class extends Component {
 
         <div class="flex gap-2 justify-end">
             <flux:modal.close>
-                <flux:button variant="ghost">Cancelar</flux:button>
+                <flux:button variant="outline">Cancelar</flux:button>
             </flux:modal.close>
             <flux:button type="submit" variant="primary">
                 <span wire:loading.remove wire:target="confirmar">Confirmar pago</span>

@@ -49,32 +49,19 @@ new #[Title('Parqueo')] class extends Component {
 }; ?>
 
 <div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <div>
-            <flux:heading size="xl">Parqueo</flux:heading>
-            <flux:subheading>Gestión de arrendatarios y cobros de espacios de parqueo.</flux:subheading>
-        </div>
+    <x-ui.page-header title="Parqueo" subtitle="Gestión de arrendatarios y cobros de espacios de parqueo.">
+        @can('create', App\Models\AlquilerParqueo::class)
+            <flux:button wire:click="abrirFormMes" variant="outline" icon="calendar-days">
+                Registrar mes
+            </flux:button>
+        @endcan
 
-        <div class="flex items-center gap-2">
-            @can('create', App\Models\AlquilerParqueo::class)
-                <flux:button
-                    wire:click="abrirFormMes"
-                    variant="ghost"
-                    icon="calendar-days">
-                    Registrar mes
-                </flux:button>
-            @endcan
-
-            @can('create', App\Models\ArrendatarioParqueo::class)
-                <flux:button
-                    wire:click="abrirFormArrendatario"
-                    variant="primary"
-                    icon="plus">
-                    Nuevo arrendatario
-                </flux:button>
-            @endcan
-        </div>
-    </div>
+        @can('create', App\Models\ArrendatarioParqueo::class)
+            <flux:button wire:click="abrirFormArrendatario" variant="primary" icon="plus">
+                Nuevo arrendatario
+            </flux:button>
+        @endcan
+    </x-ui.page-header>
 
     {{-- Resumen del mes actual --}}
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">

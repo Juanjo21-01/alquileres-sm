@@ -11,26 +11,19 @@ new #[Title('Gastos')] class extends Component {
 }; ?>
 
 <div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <div>
-            <flux:heading size="xl">Gastos</flux:heading>
-            <flux:subheading>Egresos operativos del negocio.</flux:subheading>
-        </div>
+    <x-ui.page-header title="Gastos" subtitle="Egresos operativos del negocio.">
+        @can('create', App\Models\CategoriaGasto::class)
+            <flux:button href="{{ route('categorias.index') }}" variant="outline" icon="tag" wire:navigate>
+                Categorías
+            </flux:button>
+        @endcan
 
-        <div class="flex items-center gap-2">
-            @can('create', App\Models\CategoriaGasto::class)
-                <flux:button href="{{ route('categorias.index') }}" variant="ghost" icon="tag">
-                    Categorías
-                </flux:button>
-            @endcan
-
-            @can('create', App\Models\Gasto::class)
-                <flux:button wire:click="abrirFormNuevo" variant="primary" icon="plus">
-                    Nuevo gasto
-                </flux:button>
-            @endcan
-        </div>
-    </div>
+        @can('create', App\Models\Gasto::class)
+            <flux:button wire:click="abrirFormNuevo" variant="primary" icon="plus">
+                Nuevo gasto
+            </flux:button>
+        @endcan
+    </x-ui.page-header>
 
     {{-- Tabla reusable --}}
     <livewire:gastos.tabla />

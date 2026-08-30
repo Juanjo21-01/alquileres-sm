@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Estancia;
+use App\Models\Propiedad;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -9,9 +10,24 @@ new class extends Component
 {
     use WithPagination;
 
-    public string $estado = '';
+    // Buscador de texto: en vivo (inquilino o cuarto).
+    public string $busqueda = '';
 
-    public function updatingEstado(): void
+    // Filtros aplicados (solo cambian con "Buscar").
+    public string $estado = '';
+    public string $propiedadId = '';
+    public string $fechaDesde = '';
+    public string $fechaHasta = '';
+
+    // Borradores ligados a los controles; se aplican con "Buscar".
+    public string $fEstado = '';
+    public string $fPropiedad = '';
+    public string $fDesde = '';
+    public string $fHasta = '';
+
+    public int $filtrosVersion = 0;
+
+    public function updatingBusqueda(): void
     {
         $this->resetPage();
     }
@@ -24,29 +40,96 @@ new class extends Component
         $this->resetPage();
     }
 
+    public function buscar(): void
+    {
+        $this->estado = $this->fEstado;
+        $this->propiedadId = $this->fPropiedad;
+        $this->fechaDesde = $this->fDesde;
+        $this->fechaHasta = $this->fHasta;
+        $this->resetPage();
+    }
+
+    public function limpiar(): void
+    {
+        $this->reset([
+            'busqueda',
+            'estado', 'propiedadId', 'fechaDesde', 'fechaHasta',
+            'fEstado', 'fPropiedad', 'fDesde', 'fHasta',
+        ]);
+        $this->filtrosVersion++;
+        $this->resetPage();
+    }
+
     public function with(): array
     {
-        $query = Estancia::query()
+        $estancias = Estancia::query()
             ->with(['inquilino', 'cuarto.propiedad'])
+            ->when($this->busqueda, fn ($q) => $q->where(function ($q) {
+                $q->whereHas('inquilino', fn ($q) => $q
+                    ->where('nombres', 'like', "%{$this->busqueda}%")
+                    ->orWhere('apellidos', 'like', "%{$this->busqueda}%"))
+                    ->orWhereHas('cuarto', fn ($q) => $q->where('codigo', 'like', "%{$this->busqueda}%"));
+            }))
             ->when($this->estado, fn ($q) => $q->where('estado', $this->estado))
-            ->orderByDesc('created_at');
+            ->when($this->propiedadId, fn ($q) => $q->whereHas('cuarto', fn ($q) => $q->where('propiedad_id', $this->propiedadId)))
+            ->when($this->fechaDesde, fn ($q) => $q->whereDate('fecha_inicio', '>=', $this->fechaDesde))
+            ->when($this->fechaHasta, fn ($q) => $q->whereDate('fecha_inicio', '<=', $this->fechaHasta))
+            ->orderByDesc('created_at')
+            ->paginate(15);
 
         return [
-            'estancias' => $query->paginate(15),
+            'estancias' => $estancias,
+            'propiedades' => Propiedad::orderBy('nombre')->get(),
         ];
     }
 }; ?>
 
-<div>
-    <div class="mb-4">
-        <flux:select wire:model.live="estado" class="max-w-xs">
-            <flux:select.option value="">Todos los estados</flux:select.option>
-            <flux:select.option value="activa">Activa</flux:select.option>
-            <flux:select.option value="finalizada">Finalizada</flux:select.option>
-            <flux:select.option value="cancelada">Cancelada</flux:select.option>
-        </flux:select>
+<div class="space-y-4">
+    <x-ui.filtros-card>
+        <div wire:key="estancias-filtros-{{ $filtrosVersion }}" class="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
+            <flux:input
+                wire:model.live.debounce.300ms="busqueda"
+                icon="magnifying-glass"
+                placeholder="Buscar por inquilino o cuarto..."
+                class="flex-1 min-w-48" />
+
+            <flux:select wire:model="fEstado" class="w-full md:w-40">
+                <flux:select.option value="">Todos los estados</flux:select.option>
+                <flux:select.option value="activa">Activa</flux:select.option>
+                <flux:select.option value="finalizada">Finalizada</flux:select.option>
+                <flux:select.option value="cancelada">Cancelada</flux:select.option>
+            </flux:select>
+
+            <flux:select wire:model="fPropiedad" class="w-full md:w-48">
+                <flux:select.option value="">Todas las propiedades</flux:select.option>
+                @foreach ($propiedades as $propiedad)
+                    <flux:select.option value="{{ $propiedad->id }}">{{ $propiedad->nombre }}</flux:select.option>
+                @endforeach
+            </flux:select>
+
+            <div class="flex flex-col gap-1">
+                <flux:label class="text-xs">Inicio desde</flux:label>
+                <flux:input wire:model="fDesde" type="date" class="w-full md:w-40" />
+            </div>
+
+            <div class="flex flex-col gap-1">
+                <flux:label class="text-xs">Inicio hasta</flux:label>
+                <flux:input wire:model="fHasta" type="date" class="w-full md:w-40" />
+            </div>
+        </div>
+
+        <x-slot:actions>
+            <flux:button wire:click="limpiar" variant="outline" icon="x-mark">Limpiar</flux:button>
+            <flux:button wire:click="buscar" variant="primary" icon="magnifying-glass">Buscar</flux:button>
+        </x-slot:actions>
+    </x-ui.filtros-card>
+
+    {{-- Skeleton mientras se filtra --}}
+    <div wire:loading.delay wire:target="busqueda, buscar, limpiar">
+        <x-ui.tabla-skeleton :cols="6" />
     </div>
 
+    <div wire:loading.remove.delay wire:target="busqueda, buscar, limpiar">
     <flux:table :paginate="$estancias">
         <flux:table.columns>
             <flux:table.column>Inquilino</flux:table.column>
@@ -81,18 +164,27 @@ new class extends Component
                         <flux:button
                             href="{{ route('estancias.detalle', $estancia) }}"
                             size="xs"
-                            variant="ghost">
-                            Ver
-                        </flux:button>
+                            icon="eye"
+                            variant="outline"/>
                     </flux:table.cell>
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="6" class="text-center text-zinc-500 py-8">
-                        No hay estancias registradas.
+                    <flux:table.cell colspan="6">
+                        <x-ui.empty-state
+                            icon="home"
+                            title="No hay estancias"
+                            description="Abre la primera estancia o cambia el filtro de estado.">
+                            @can('create', App\Models\Estancia::class)
+                                <flux:button wire:click="$dispatch('abrir-form-estancia')" size="sm" variant="primary" icon="plus">
+                                    Abrir estancia
+                                </flux:button>
+                            @endcan
+                        </x-ui.empty-state>
                     </flux:table.cell>
                 </flux:table.row>
             @endforelse
         </flux:table.rows>
     </flux:table>
+    </div>
 </div>

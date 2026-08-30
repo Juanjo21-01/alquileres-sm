@@ -56,7 +56,7 @@ new #[Title('Detalle de estancia')] class extends Component
 <div class="space-y-6">
     {{-- Breadcrumb --}}
     <div class="flex items-center gap-2 text-sm text-zinc-500">
-        <flux:button href="{{ route('estancias.index') }}" variant="ghost" size="xs" icon="arrow-left">
+        <flux:button href="{{ route('estancias.index') }}" variant="outline" size="xs" icon="arrow-left">
             Estancias
         </flux:button>
     </div>
@@ -82,10 +82,10 @@ new #[Title('Detalle de estancia')] class extends Component
 
             @if ($estancia->estaActiva())
                 @can('update', $estancia)
-                    <flux:button wire:click="abrirFormEditar" variant="ghost" icon="pencil-square">
+                    <flux:button wire:click="abrirFormEditar" variant="outline" icon="pencil-square">
                         Editar
                     </flux:button>
-                    <flux:button wire:click="abrirFormCerrar" variant="ghost" icon="check-circle">
+                    <flux:button wire:click="abrirFormCerrar" variant="outline" icon="check-circle">
                         Cerrar estancia
                     </flux:button>
                 @endcan
@@ -206,7 +206,7 @@ new #[Title('Detalle de estancia')] class extends Component
                     <flux:button
                         href="{{ route('inquilinos.detalle', $estancia->inquilino) }}"
                         size="sm"
-                        variant="ghost"
+                        variant="outline"
                         class="w-full mt-2">
                         Ver perfil
                     </flux:button>

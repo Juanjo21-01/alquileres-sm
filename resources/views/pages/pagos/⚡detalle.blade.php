@@ -42,7 +42,7 @@ new #[Title('Detalle de pago')] class extends Component {
 
     {{-- Breadcrumb --}}
     <div>
-        <flux:button href="{{ route('pagos.index') }}" variant="ghost" size="xs" icon="arrow-left">
+        <flux:button href="{{ route('pagos.index') }}" variant="outline" size="xs" icon="arrow-left">
             Pagos
         </flux:button>
     </div>
@@ -61,7 +61,7 @@ new #[Title('Detalle de pago')] class extends Component {
         <div class="flex items-center gap-2">
             <flux:button
                 href="{{ route('recibos.pdf', $pago) }}"
-                variant="ghost"
+                variant="outline"
                 icon="arrow-down-tray">
                 Descargar PDF
             </flux:button>
@@ -164,7 +164,7 @@ new #[Title('Detalle de pago')] class extends Component {
                         @if ($pago->estancia)
                             <flux:button
                                 href="{{ route('estancias.detalle', $pago->estancia) }}"
-                                variant="ghost"
+                                variant="outline"
                                 size="xs">
                                 Ver estancia #{{ $pago->estancia->id }}
                             </flux:button>

@@ -55,17 +55,25 @@ new class extends Component {
     }
 }; ?>
 
-<div>
-    <div class="flex flex-col md:flex-row gap-3 mb-4">
-        <flux:input
-            wire:model.live.debounce.300ms="busqueda"
-            icon="magnifying-glass"
-            placeholder="Buscar por nombre o código..."
-            class="flex-1" />
+<div class="space-y-4">
+    <x-ui.filtros-card>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <flux:input
+                wire:model.live.debounce.300ms="busqueda"
+                icon="magnifying-glass"
+                placeholder="Buscar por nombre o código..."
+                class="flex-1" />
 
-        <flux:switch wire:model.live="soloActivas" label="Solo activas" />
+            <flux:switch wire:model.live="soloActivas" label="Solo activas" />
+        </div>
+    </x-ui.filtros-card>
+
+    {{-- Skeleton mientras se filtra --}}
+    <div wire:loading.delay wire:target="busqueda, soloActivas">
+        <x-ui.tabla-skeleton :cols="7" />
     </div>
 
+    <div wire:loading.remove.delay wire:target="busqueda, soloActivas">
     <flux:table :paginate="$categorias">
         <flux:table.columns>
             <flux:table.column>Nombre</flux:table.column>
@@ -111,7 +119,7 @@ new class extends Component {
                                     wire:click="editar({{ $categoria->id }})"
                                     size="xs"
                                     icon="pencil-square"
-                                    variant="ghost" />
+                                    variant="outline" />
                             @endcan
 
                             @can('delete', $categoria)
@@ -126,11 +134,21 @@ new class extends Component {
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="7" class="text-center text-zinc-500 py-8">
-                        No hay categorías registradas.
+                    <flux:table.cell colspan="7">
+                        <x-ui.empty-state
+                            icon="tag"
+                            title="No hay categorías"
+                            description="Crea la primera categoría de gasto (luz, agua, mantenimiento...).">
+                            @can('create', App\Models\CategoriaGasto::class)
+                                <flux:button variant="primary" icon="plus" size="sm" wire:click="$dispatch('abrir-form-categoria-gasto')">
+                                    Nueva categoría
+                                </flux:button>
+                            @endcan
+                        </x-ui.empty-state>
                     </flux:table.cell>
                 </flux:table.row>
             @endforelse
         </flux:table.rows>
     </flux:table>
+    </div>
 </div>

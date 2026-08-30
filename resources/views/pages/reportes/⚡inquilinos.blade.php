@@ -8,10 +8,7 @@ new #[Title('Reporte de inquilinos')] class extends Component {
 }; ?>
 
 <div class="space-y-6">
-    <div>
-        <flux:heading size="xl">Inquilinos</flux:heading>
-        <flux:subheading>Actividad de estancias por inquilino. Entra al detalle para ver su historial completo.</flux:subheading>
-    </div>
+    <x-ui.page-header title="Inquilinos" subtitle="Actividad de estancias por inquilino. Entra al detalle para ver su historial completo." />
 
     <livewire:reportes.tabla-inquilinos />
 </div>

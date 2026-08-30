@@ -33,12 +33,12 @@ new class extends Component {
 
             <div class="flex items-center gap-2 shrink-0">
                 @if ($descargaUrl)
-                    <flux:button href="{{ $descargaUrl }}" size="sm" variant="ghost" icon="arrow-down-tray">
+                    <flux:button href="{{ $descargaUrl }}" size="sm" variant="outline" icon="arrow-down-tray">
                         Descargar
                     </flux:button>
                 @endif
                 @if ($url)
-                    <flux:button href="{{ $url }}" target="_blank" size="sm" variant="ghost" icon="arrow-top-right-on-square">
+                    <flux:button href="{{ $url }}" target="_blank" size="sm" variant="outline" icon="arrow-top-right-on-square">
                         Abrir
                     </flux:button>
                 @endif

@@ -64,7 +64,7 @@ new class extends Component {
     }
 }; ?>
 
-<flux:modal name="cambiar-estado-cuarto" class="md:w-[480px]">
+<flux:modal name="cambiar-estado-cuarto" class="md:w-120">
     <div class="space-y-4">
         <div>
             <flux:heading size="lg">Cambiar estado del cuarto</flux:heading>
@@ -86,7 +86,7 @@ new class extends Component {
         @endif
 
         <div class="flex gap-2 justify-end">
-            <flux:button type="button" wire:click="cancelar" variant="ghost">Cancelar</flux:button>
+            <flux:button type="button" wire:click="cancelar" variant="outline">Cancelar</flux:button>
             <flux:button wire:click="cambiar" variant="primary">
                 <span wire:loading.remove wire:target="cambiar">Confirmar cambio</span>
                 <span wire:loading wire:target="cambiar">Guardando...</span>

@@ -9,7 +9,18 @@ new class extends Component
 {
     use WithPagination;
 
+    // Buscador de texto: en vivo.
     public string $busqueda = '';
+
+    // Filtros aplicados (solo cambian con "Buscar").
+    public string $ocupacion = '';
+    public string $estanciaFiltro = '';
+
+    // Borradores ligados a los controles; se aplican con "Buscar".
+    public string $fOcupacion = '';
+    public string $fEstancia = '';
+
+    public int $filtrosVersion = 0;
 
     public function updatingBusqueda(): void
     {
@@ -20,6 +31,20 @@ new class extends Component
     #[On('inquilino-eliminado')]
     public function refrescar(): void
     {
+        $this->resetPage();
+    }
+
+    public function buscar(): void
+    {
+        $this->ocupacion = $this->fOcupacion;
+        $this->estanciaFiltro = $this->fEstancia;
+        $this->resetPage();
+    }
+
+    public function limpiar(): void
+    {
+        $this->reset(['busqueda', 'ocupacion', 'estanciaFiltro', 'fOcupacion', 'fEstancia']);
+        $this->filtrosVersion++;
         $this->resetPage();
     }
 
@@ -45,6 +70,9 @@ new class extends Component
                     ->orWhere('telefono', 'like', "%{$this->busqueda}%")
                     ->orWhere('vehiculo_placa', 'like', "%{$this->busqueda}%");
             }))
+            ->when($this->ocupacion, fn ($q) => $q->where('ocupacion', $this->ocupacion))
+            ->when($this->estanciaFiltro === 'con', fn ($q) => $q->whereHas('estanciaActiva'))
+            ->when($this->estanciaFiltro === 'sin', fn ($q) => $q->whereDoesntHave('estanciaActiva'))
             ->orderBy('apellidos')
             ->orderBy('nombres');
 
@@ -54,15 +82,41 @@ new class extends Component
     }
 }; ?>
 
-<div>
-    <div class="mb-4">
-        <flux:input
-            wire:model.live.debounce.300ms="busqueda"
-            icon="magnifying-glass"
-            placeholder="Buscar por nombre, apellido, DPI o teléfono..."
-            class="max-w-sm" />
+<div class="space-y-4">
+    <x-ui.filtros-card>
+        <div wire:key="inquilinos-filtros-{{ $filtrosVersion }}" class="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
+            <flux:input
+                wire:model.live.debounce.300ms="busqueda"
+                icon="magnifying-glass"
+                placeholder="Buscar por nombre, DPI o teléfono..."
+                class="flex-1 min-w-48" />
+
+            <flux:select wire:model="fOcupacion" class="w-full md:w-48">
+                <flux:select.option value="">Todas las ocupaciones</flux:select.option>
+                <flux:select.option value="estudiante">Estudiante</flux:select.option>
+                <flux:select.option value="salud">Personal de salud</flux:select.option>
+                <flux:select.option value="otro">Otro</flux:select.option>
+            </flux:select>
+
+            <flux:select wire:model="fEstancia" class="w-full md:w-48">
+                <flux:select.option value="">Estancia: todas</flux:select.option>
+                <flux:select.option value="con">Con estancia activa</flux:select.option>
+                <flux:select.option value="sin">Sin estancia activa</flux:select.option>
+            </flux:select>
+        </div>
+
+        <x-slot:actions>
+            <flux:button wire:click="limpiar" variant="outline" icon="x-mark">Limpiar</flux:button>
+            <flux:button wire:click="buscar" variant="primary" icon="magnifying-glass">Buscar</flux:button>
+        </x-slot:actions>
+    </x-ui.filtros-card>
+
+    {{-- Skeleton mientras se filtra --}}
+    <div wire:loading.delay wire:target="busqueda, buscar, limpiar">
+        <x-ui.tabla-skeleton :cols="6" />
     </div>
 
+    <div wire:loading.remove.delay wire:target="busqueda, buscar, limpiar">
     <flux:table :paginate="$inquilinos">
         <flux:table.columns>
             <flux:table.column>Nombre</flux:table.column>
@@ -109,17 +163,16 @@ new class extends Component
                             <flux:button
                                 href="{{ route('inquilinos.detalle', $inquilino) }}"
                                 size="xs"
-                                variant="ghost"
-                                wire:navigate>
-                                Ver
-                            </flux:button>
+                                variant="outline"
+                                icon="eye"
+                                wire:navigate />
 
                             @can('update', $inquilino)
                                 <flux:button
                                     wire:click="editar({{ $inquilino->id }})"
                                     size="xs"
                                     icon="pencil-square"
-                                    variant="ghost" />
+                                    variant="outline" />
                             @endcan
 
                             @can('delete', $inquilino)
@@ -134,20 +187,21 @@ new class extends Component
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="6" class="text-center text-zinc-500 py-8">
-                        No hay inquilinos registrados.
-                        @can('create', App\Models\Inquilino::class)
-                            <flux:button
-                                wire:click="$dispatch('abrir-form-inquilino')"
-                                size="sm"
-                                variant="ghost"
-                                class="ml-2">
-                                Agregar inquilino
-                            </flux:button>
-                        @endcan
+                    <flux:table.cell colspan="6">
+                        <x-ui.empty-state
+                            icon="users"
+                            title="No hay inquilinos"
+                            description="Registra el primer inquilino o ajusta la búsqueda.">
+                            @can('create', App\Models\Inquilino::class)
+                                <flux:button wire:click="$dispatch('abrir-form-inquilino')" size="sm" variant="primary" icon="plus">
+                                    Nuevo inquilino
+                                </flux:button>
+                            @endcan
+                        </x-ui.empty-state>
                     </flux:table.cell>
                 </flux:table.row>
             @endforelse
         </flux:table.rows>
     </flux:table>
+    </div>
 </div>

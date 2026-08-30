@@ -114,7 +114,7 @@ new #[Title('Detalle de cuarto')] class extends Component {
 <div class="space-y-6">
     {{-- Breadcrumb --}}
     <div class="flex items-center gap-2 text-sm text-zinc-500">
-        <flux:button href="{{ route('cuartos.tablero', $cuarto->propiedad) }}" variant="ghost" size="xs" icon="arrow-left" wire:navigate>
+        <flux:button href="{{ route('cuartos.tablero', $cuarto->propiedad) }}" variant="outline" size="xs" icon="arrow-left" wire:navigate>
             {{ $cuarto->propiedad->nombre }}
         </flux:button>
     </div>
@@ -141,8 +141,8 @@ new #[Title('Detalle de cuarto')] class extends Component {
             @endphp
             <flux:badge :color="$estadoColor">{{ Cuarto::estados()[$cuarto->estado] ?? $cuarto->estado }}</flux:badge>
 
-            <flux:button wire:click="exportarCsv" icon="table-cells" variant="ghost" size="sm">CSV</flux:button>
-            <flux:button wire:click="exportarPdf" icon="document-arrow-down" variant="ghost" size="sm">PDF</flux:button>
+            <flux:button wire:click="exportarCsv" icon="table-cells" variant="outline" size="sm">CSV</flux:button>
+            <flux:button wire:click="exportarPdf" icon="document-arrow-down" variant="outline" size="sm">PDF</flux:button>
         </div>
     </div>
 
@@ -166,7 +166,7 @@ new #[Title('Detalle de cuarto')] class extends Component {
                 <flux:label class="text-xs">Hasta</flux:label>
                 <flux:input wire:model.live.debounce.500ms="hasta" type="date" class="w-full sm:w-44" />
             </div>
-            <flux:button wire:click="limpiar" variant="ghost" size="sm" icon="arrow-path">Limpiar</flux:button>
+            <flux:button wire:click="limpiar" variant="outline" size="sm" icon="arrow-path">Limpiar</flux:button>
         @endif
     </div>
 
@@ -229,7 +229,7 @@ new #[Title('Detalle de cuarto')] class extends Component {
                         </flux:table.cell>
                         <flux:table.cell align="end">Q {{ number_format($e['precio'], 2) }}</flux:table.cell>
                         <flux:table.cell align="end">
-                            <flux:button href="{{ route('estancias.detalle', $e['estancia_id']) }}" size="xs" variant="ghost" icon="eye" wire:navigate />
+                            <flux:button href="{{ route('estancias.detalle', $e['estancia_id']) }}" size="xs" variant="outline" icon="eye" wire:navigate />
                         </flux:table.cell>
                     </flux:table.row>
                 @empty

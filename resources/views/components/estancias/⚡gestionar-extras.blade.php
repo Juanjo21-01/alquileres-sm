@@ -117,7 +117,7 @@ new class extends Component {
             @if ($estancia->estaActiva())
                 @can('update', $estancia)
                     @if (!$mostrarForm)
-                        <flux:button wire:click="mostrarFormulario" size="xs" variant="ghost" icon="plus">
+                        <flux:button wire:click="mostrarFormulario" size="xs" variant="outline" icon="plus">
                             Agregar extra
                         </flux:button>
                     @endif
@@ -182,14 +182,14 @@ new class extends Component {
                         <span wire:loading.remove wire:target="agregar">Agregar</span>
                         <span wire:loading wire:target="agregar">Agregando...</span>
                     </flux:button>
-                    <flux:button type="button" wire:click="cancelarForm" size="sm" variant="ghost">Cancelar
+                    <flux:button type="button" wire:click="cancelarForm" size="sm" variant="outline">Cancelar
                     </flux:button>
                 </div>
             </form>
         @endif
     </flux:card>
 
-    <flux:modal name="confirmar-eliminar-extra" class="md:w-[420px]">
+    <flux:modal name="confirmar-eliminar-extra" class="md:w-105">
         <div class="space-y-4">
             <div>
                 <flux:heading size="lg">Eliminar extra</flux:heading>
@@ -201,7 +201,7 @@ new class extends Component {
 
             <div class="flex gap-2 justify-end">
                 <flux:modal.close>
-                    <flux:button variant="ghost">Cancelar</flux:button>
+                    <flux:button variant="outline">Cancelar</flux:button>
                 </flux:modal.close>
                 <flux:button wire:click="eliminar" variant="danger">
                     <span wire:loading.remove wire:target="eliminar">Eliminar</span>

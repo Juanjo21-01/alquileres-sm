@@ -173,7 +173,7 @@ new class extends Component {
                                         <flux:button
                                             href="{{ route('pagos.detalle', $pago) }}"
                                             size="xs"
-                                            variant="ghost"
+                                            variant="outline"
                                             icon="eye" />
 
                                         @can('delete', $pago)

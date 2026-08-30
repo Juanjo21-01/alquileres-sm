@@ -123,7 +123,7 @@ new class extends Component {
                         <flux:button
                             href="{{ route('cuartos.detalle', $cuarto) }}"
                             size="xs"
-                            variant="ghost"
+                            variant="outline"
                             icon="eye"
                             title="Ver detalle e historial"
                             wire:navigate />
@@ -132,14 +132,14 @@ new class extends Component {
                             <flux:button
                                 wire:click="editar({{ $cuarto->id }})"
                                 size="xs"
-                                variant="ghost"
+                                variant="outline"
                                 icon="pencil-square" />
 
                             @if ($cuarto->estado === 'disponible' || $cuarto->estado === 'mantenimiento')
                                 <flux:button
                                     wire:click="cambiarEstado({{ $cuarto->id }})"
                                     size="xs"
-                                    variant="ghost"
+                                    variant="outline"
                                     icon="arrow-path">
                                     Estado
                                 </flux:button>

@@ -152,7 +152,7 @@ new class extends Component {
             </div>
 
             <div class="flex gap-2 md:ml-auto">
-                <flux:button wire:click="limpiar" variant="ghost" icon="arrow-path">Limpiar</flux:button>
+                <flux:button wire:click="limpiar" variant="outline" icon="arrow-path">Limpiar</flux:button>
             </div>
         </div>
 
@@ -173,11 +173,11 @@ new class extends Component {
         </flux:text>
 
         <div class="flex gap-2">
-            <flux:button wire:click="exportarCsv" icon="table-cells" variant="ghost" size="sm">
+            <flux:button wire:click="exportarCsv" icon="table-cells" variant="outline" size="sm">
                 <span wire:loading.remove wire:target="exportarCsv">Exportar CSV</span>
                 <span wire:loading wire:target="exportarCsv">Generando...</span>
             </flux:button>
-            <flux:button wire:click="exportarPdf" icon="document-arrow-down" variant="ghost" size="sm">
+            <flux:button wire:click="exportarPdf" icon="document-arrow-down" variant="outline" size="sm">
                 <span wire:loading.remove wire:target="exportarPdf">Exportar PDF</span>
                 <span wire:loading wire:target="exportarPdf">Generando...</span>
             </flux:button>
@@ -216,7 +216,7 @@ new class extends Component {
                         @endif
                     </flux:table.cell>
                     <flux:table.cell align="end">
-                        <flux:button href="{{ route('inquilinos.detalle', $r['inquilino_id']) }}" size="xs" variant="ghost" icon="eye" wire:navigate />
+                        <flux:button href="{{ route('inquilinos.detalle', $r['inquilino_id']) }}" size="xs" variant="outline" icon="eye" wire:navigate />
                     </flux:table.cell>
                 </flux:table.row>
             @empty

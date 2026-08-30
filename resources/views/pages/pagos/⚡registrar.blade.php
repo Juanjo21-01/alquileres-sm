@@ -286,7 +286,7 @@ new #[Title('Registrar pago')] class extends Component {
 <div class="space-y-6">
     {{-- Breadcrumb --}}
     <div>
-        <flux:button href="{{ route('pagos.index') }}" variant="ghost" size="xs" icon="arrow-left">
+        <flux:button href="{{ route('pagos.index') }}" variant="outline" size="xs" icon="arrow-left">
             Pagos
         </flux:button>
     </div>
@@ -458,7 +458,7 @@ new #[Title('Registrar pago')] class extends Component {
                     <flux:textarea wire:model="notas" label="Notas" rows="2" />
 
                     <div class="flex gap-3 justify-end pt-2">
-                        <flux:button href="{{ route('pagos.index') }}" variant="ghost">
+                        <flux:button href="{{ route('pagos.index') }}" variant="outline">
                             Cancelar
                         </flux:button>
                         <flux:button type="submit" variant="primary">

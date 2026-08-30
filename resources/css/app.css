@@ -61,6 +61,47 @@ select:focus[data-flux-control] {
     @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
 }
 
+/* === SGA-SM · Cimientos visuales (Fase 6C-1) ========================== */
+
+/* Botones: Flux no aplica cursor de puntero en <button> por defecto, así que
+   las acciones no "se sienten" clickeables. Lo forzamos en todos los botones. */
+[data-flux-button] {
+    @apply cursor-pointer;
+}
+
+/* Ítems de menú/dropdown también son clickeables (Flux tampoco los marca). */
+[data-flux-menu-item] {
+    @apply cursor-pointer;
+}
+
+/* Tablas: por defecto Flux solo dibuja separadores horizontales muy tenues y
+    sin fondo de header. Agregamos marco, header diferenciado y bordes visibles
+   para distinguir encabezado de contenido. */
+ui-table-scroll-area {
+    @apply rounded-lg border border-zinc-200 dark:border-zinc-700;
+}
+
+[data-flux-columns] {
+    @apply bg-zinc-500/5 dark:bg-white/5;
+}
+
+[data-flux-column],
+[data-flux-cell] {
+    @apply border-zinc-200 dark:border-zinc-700;
+}
+
+/* Padding interno en primera/última celda para que no se peguen al marco
+   (Flux las deja sin padding lateral pensando en tablas sin borde). */
+[data-flux-column]:first-child,
+[data-flux-cell]:first-child {
+    @apply ps-4;
+}
+
+[data-flux-column]:last-child,
+[data-flux-cell]:last-child {
+    @apply pe-4;
+}
+
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */

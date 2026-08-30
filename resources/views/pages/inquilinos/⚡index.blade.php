@@ -12,15 +12,13 @@ new #[Title('Inquilinos')] class extends Component
 }; ?>
 
 <div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <flux:heading size="xl">Inquilinos</flux:heading>
-
+    <x-ui.page-header title="Inquilinos" subtitle="Directorio de inquilinos.">
         @can('create', App\Models\Inquilino::class)
             <flux:button wire:click="abrirFormNuevo" variant="primary" icon="plus">
                 Nuevo inquilino
             </flux:button>
         @endcan
-    </div>
+    </x-ui.page-header>
 
     <livewire:inquilinos.tabla />
     <livewire:inquilinos.form />

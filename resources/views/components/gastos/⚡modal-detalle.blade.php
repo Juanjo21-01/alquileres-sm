@@ -49,7 +49,7 @@ new class extends Component {
     }
 }; ?>
 
-<flux:modal name="detalle-gasto" class="md:w-[600px]">
+<flux:modal name="detalle-gasto" class="md:w-150">
     @if ($gasto)
         <div class="space-y-5">
             <div class="flex items-start justify-between gap-3 pr-10">
@@ -125,7 +125,7 @@ new class extends Component {
                     <span class="text-zinc-600 dark:text-zinc-400">Comprobante</span>
                 </div>
                 @if ($gasto->tieneComprobante())
-                    <flux:button wire:click="verComprobante" size="sm" variant="ghost" icon="eye">
+                    <flux:button wire:click="verComprobante" size="sm" variant="outline" icon="eye">
                         Ver
                     </flux:button>
                 @else
@@ -135,7 +135,7 @@ new class extends Component {
 
             <div class="flex gap-2 justify-end">
                 <flux:modal.close>
-                    <flux:button variant="ghost">Cerrar</flux:button>
+                    <flux:button variant="outline">Cerrar</flux:button>
                 </flux:modal.close>
 
                 @can('update', $gasto)

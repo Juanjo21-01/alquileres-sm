@@ -19,29 +19,16 @@ new #[Title('Pagos')] class extends Component {
 }; ?>
 
 <div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <div>
-            <flux:heading size="xl">Pagos</flux:heading>
-            <flux:subheading>Historial de todos los pagos registrados.</flux:subheading>
-        </div>
-
-        <div class="flex items-center gap-2">
-            @can('create', App\Models\Pago::class)
-                <flux:button
-                    href="{{ route('pagos.registrar') }}"
-                    variant="ghost"
-                    icon="document-plus">
-                    Registrar pago
-                </flux:button>
-                <flux:button
-                    wire:click="abrirFormPago"
-                    variant="primary"
-                    icon="plus">
-                    Pago rápido
-                </flux:button>
-            @endcan
-        </div>
-    </div>
+    <x-ui.page-header title="Pagos" subtitle="Historial de todos los pagos registrados.">
+        @can('create', App\Models\Pago::class)
+            <flux:button href="{{ route('pagos.registrar') }}" variant="outline" icon="document-plus" wire:navigate>
+                Registrar pago
+            </flux:button>
+            <flux:button wire:click="abrirFormPago" variant="primary" icon="plus">
+                Pago rápido
+            </flux:button>
+        @endcan
+    </x-ui.page-header>
 
     <livewire:pagos.tabla />
 

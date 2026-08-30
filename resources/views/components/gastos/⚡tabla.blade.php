@@ -10,29 +10,28 @@ use Livewire\WithPagination;
 new class extends Component {
     use WithPagination;
 
+    // Buscador de texto: en vivo (se aplica al escribir).
     public string $busqueda = '';
+
+    // Filtros aplicados (se usan en la consulta; solo cambian al pulsar "Buscar").
     public string $categoriaId = '';
     public string $propiedadId = '';
     public string $metodo = '';
     public string $fechaDesde = '';
     public string $fechaHasta = '';
 
+    // Borradores ligados a los controles; se aplican al pulsar "Buscar".
+    public string $fCategoria = '';
+    public string $fPropiedad = '';
+    public string $fMetodo = '';
+    public string $fDesde = '';
+    public string $fHasta = '';
+
+    // Se incrementa en limpiar() para forzar el re-montaje de los controles
+    // (garantiza que los selects/fechas diferidos se vacíen también en el cliente).
+    public int $filtrosVersion = 0;
+
     public function updatingBusqueda(): void
-    {
-        $this->resetPage();
-    }
-
-    public function updatingCategoriaId(): void
-    {
-        $this->resetPage();
-    }
-
-    public function updatingPropiedadId(): void
-    {
-        $this->resetPage();
-    }
-
-    public function updatingMetodo(): void
     {
         $this->resetPage();
     }
@@ -46,14 +45,22 @@ new class extends Component {
 
     public function buscar(): void
     {
-        // Aplica el rango de fechas (los inputs usan wire:model diferido).
+        $this->categoriaId = $this->fCategoria;
+        $this->propiedadId = $this->fPropiedad;
+        $this->metodo = $this->fMetodo;
+        $this->fechaDesde = $this->fDesde;
+        $this->fechaHasta = $this->fHasta;
         $this->resetPage();
     }
 
-    public function limpiarFechas(): void
+    public function limpiar(): void
     {
-        $this->fechaDesde = '';
-        $this->fechaHasta = '';
+        $this->reset([
+            'busqueda',
+            'categoriaId', 'propiedadId', 'metodo', 'fechaDesde', 'fechaHasta',
+            'fCategoria', 'fPropiedad', 'fMetodo', 'fDesde', 'fHasta',
+        ]);
+        $this->filtrosVersion++;
         $this->resetPage();
     }
 
@@ -103,57 +110,58 @@ new class extends Component {
     }
 }; ?>
 
-<div>
-    {{-- Filtros --}}
-    <div class="flex flex-col md:flex-row md:flex-wrap gap-3 mb-4">
-        <flux:input
-            wire:model.live.debounce.300ms="busqueda"
-            icon="magnifying-glass"
-            placeholder="Buscar por descripción o proveedor..."
-            class="flex-1 min-w-48" />
+<div class="space-y-4">
+    <x-ui.filtros-card>
+        <div wire:key="gastos-filtros-{{ $filtrosVersion }}" class="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
+            <flux:input
+                wire:model.live.debounce.300ms="busqueda"
+                icon="magnifying-glass"
+                placeholder="Buscar por descripción o proveedor..."
+                class="flex-1 min-w-48" />
 
-        <flux:select wire:model.live="categoriaId" class="w-44">
-            <flux:select.option value="">Todas las categorías</flux:select.option>
-            @foreach ($categorias as $categoria)
-                <flux:select.option value="{{ $categoria->id }}">{{ $categoria->nombre }}</flux:select.option>
-            @endforeach
-        </flux:select>
+            <flux:select wire:model="fCategoria" class="w-full md:w-44">
+                <flux:select.option value="">Todas las categorías</flux:select.option>
+                @foreach ($categorias as $categoria)
+                    <flux:select.option value="{{ $categoria->id }}">{{ $categoria->nombre }}</flux:select.option>
+                @endforeach
+            </flux:select>
 
-        <flux:select wire:model.live="propiedadId" class="w-44">
-            <flux:select.option value="">Todas las propiedades</flux:select.option>
-            @foreach ($propiedades as $propiedad)
-                <flux:select.option value="{{ $propiedad->id }}">{{ $propiedad->nombre }}</flux:select.option>
-            @endforeach
-        </flux:select>
+            <flux:select wire:model="fPropiedad" class="w-full md:w-44">
+                <flux:select.option value="">Todas las propiedades</flux:select.option>
+                @foreach ($propiedades as $propiedad)
+                    <flux:select.option value="{{ $propiedad->id }}">{{ $propiedad->nombre }}</flux:select.option>
+                @endforeach
+            </flux:select>
 
-        <flux:select wire:model.live="metodo" class="w-40">
-            <flux:select.option value="">Todos los métodos</flux:select.option>
-            <flux:select.option value="efectivo">Efectivo</flux:select.option>
-            <flux:select.option value="cuenta">Cuenta</flux:select.option>
-        </flux:select>
+            <flux:select wire:model="fMetodo" class="w-full md:w-40">
+                <flux:select.option value="">Todos los métodos</flux:select.option>
+                <flux:select.option value="efectivo">Efectivo</flux:select.option>
+                <flux:select.option value="cuenta">Cuenta</flux:select.option>
+            </flux:select>
 
+            <div class="flex flex-col gap-1">
+                <flux:label class="text-xs">Desde</flux:label>
+                <flux:input wire:model="fDesde" type="date" class="w-full md:w-40" />
+            </div>
+
+            <div class="flex flex-col gap-1">
+                <flux:label class="text-xs">Hasta</flux:label>
+                <flux:input wire:model="fHasta" type="date" class="w-full md:w-40" />
+            </div>
+        </div>
+
+        <x-slot:actions>
+            <flux:button wire:click="limpiar" variant="outline" icon="x-mark">Limpiar</flux:button>
+            <flux:button wire:click="buscar" variant="primary" icon="magnifying-glass">Buscar</flux:button>
+        </x-slot:actions>
+    </x-ui.filtros-card>
+
+    {{-- Skeleton mientras se filtra --}}
+    <div wire:loading.delay wire:target="busqueda, buscar, limpiar">
+        <x-ui.tabla-skeleton :cols="8" />
     </div>
 
-    {{-- Filtro por rango de fechas (manual: aplica con "Buscar") --}}
-    <div class="flex flex-col sm:flex-row sm:items-end gap-3 mb-4">
-        <div class="flex-1">
-            <flux:label class="text-xs">Desde</flux:label>
-            <flux:input wire:model="fechaDesde" type="date" class="w-full" />
-        </div>
-        <div class="flex-1">
-            <flux:label class="text-xs">Hasta</flux:label>
-            <flux:input wire:model="fechaHasta" type="date" class="w-full" />
-        </div>
-        <div class="flex gap-2">
-            <flux:button wire:click="buscar" variant="primary" icon="magnifying-glass">
-                Buscar
-            </flux:button>
-            <flux:button wire:click="limpiarFechas" variant="ghost" icon="x-mark">
-                Limpiar
-            </flux:button>
-        </div>
-    </div>
-
+    <div wire:loading.remove.delay wire:target="busqueda, buscar, limpiar">
     <flux:table :paginate="$gastos">
         <flux:table.columns>
             <flux:table.column>Fecha</flux:table.column>
@@ -203,14 +211,14 @@ new class extends Component {
                                 wire:click="verDetalle({{ $gasto->id }})"
                                 size="xs"
                                 icon="eye"
-                                variant="ghost" />
+                                variant="outline" />
 
                             @can('update', $gasto)
                                 <flux:button
                                     wire:click="editar({{ $gasto->id }})"
                                     size="xs"
                                     icon="pencil-square"
-                                    variant="ghost" />
+                                    variant="outline" />
                             @endcan
 
                             @can('delete', $gasto)
@@ -225,8 +233,17 @@ new class extends Component {
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="8" class="text-center text-zinc-500 py-10">
-                        No hay gastos registrados.
+                    <flux:table.cell colspan="8">
+                        <x-ui.empty-state
+                            icon="receipt-percent"
+                            title="No hay gastos"
+                            description="Registra el primer egreso o ajusta los filtros.">
+                            @can('create', App\Models\Gasto::class)
+                                <flux:button variant="primary" icon="plus" size="sm" wire:click="$dispatch('abrir-form-gasto')">
+                                    Nuevo gasto
+                                </flux:button>
+                            @endcan
+                        </x-ui.empty-state>
                     </flux:table.cell>
                 </flux:table.row>
             @endforelse
@@ -241,5 +258,6 @@ new class extends Component {
                 Q {{ number_format($totalFiltrado, 2) }}
             </span>
         </div>
+    </div>
     </div>
 </div>

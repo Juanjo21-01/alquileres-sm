@@ -125,7 +125,7 @@ new class extends Component {
                                         <flux:button
                                             wire:click="confirmarMarcarPagado({{ $mes->id }})"
                                             size="xs"
-                                            variant="ghost"
+                                            variant="outline"
                                             icon="check-circle"
                                             title="Marcar pagado" />
                                     @endif
